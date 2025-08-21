@@ -48,8 +48,7 @@ Sistema dividido em:
 - **Mobile (Autoatendimento e Operações)**: pedidos pelo cliente via tablet/WhatsApp, visão do chapeiro, login para funcionários.  
 
 ### 2.4 Declaração de Posição do Produto  
-Para donos de pequenos negócios de alimentação que precisam de mais controle e agilidade, o sistema de gestão para food trucks é uma solução digital e acessível que automatiza vendas, organiza estoque e melhora a experiência do cliente sem exigir conhecimento técnico avançado.
-
+Para donos de pequenos negócios de alimentação que precisam de mais controle e agilidade, o Sistema de Gestão para Food Trucks é uma solução digital e acessível que auxilia na automatização vendas, organização de estoque e melhoria da experiência do cliente sem exigir conhecimento técnico avançado.
 
 
 ## 3. Stakeholders e Usuários
