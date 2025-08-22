@@ -1,11 +1,14 @@
 # Documento de Visão — Sistema de Gerenciamento e Autoatendimento para Food Trucks
-
+<div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+  <img src="../imagens/Logo.png" alt="Tela de Login" style="max-width: 30%; max-height: 80vh;" />
+</div>
 
 ## 1. Introdução
 
 ### 1.1 Objetivo do Projeto  
-O presente documento apresenta a visão para o desenvolvimento de um sistema de gerenciamento de vendas e estoque voltado para food trucks, com foco inicial no Food Truck do Sr. Elpídio Castro Alvez dos Santos Sobrinho, localizado em Guaramirim – SC.  
-O objetivo é descrever, de forma clara e organizada, o escopo, as funcionalidades e as restrições da solução, servindo como base para o alinhamento entre a equipe de desenvolvimento, stakeholders e futuros usuários.
+O objetivo do projeto é desenvolver um sistema digital integrado de gerenciamento e autoatendimento para food trucks, que permita automatizar o registro de vendas, controlar o estoque de insumos, organizar pedidos e pagamentos, além de oferecer relatórios de desempenho em tempo real.
+
+A solução visa aumentar a eficiência operacional, reduzir erros no atendimento, melhorar a experiência do cliente e fornecer ao proprietário maior controle financeiro e organizacional do negócio.
 
 ### 1.2 Escopo do Produto  
 O sistema será composto por:  
@@ -54,8 +57,8 @@ Para donos de pequenos negócios de alimentação que precisam de mais controle 
 ## 3. Stakeholders e Usuários
 
 ### 3.1 Identificação dos Stakeholders  
-Principal stakeholder: **Sr. Elpídio Castro Alvez dos Santos Sobrinho** (proprietário).  
-Necessidades: reduzir custos, otimizar trabalho, melhorar controle financeiro e organizar pedidos/pagamentos.
+* Principal stakeholder: **Sr. Elpídio Castro Alvez dos Santos Sobrinho** (proprietário).  
+* Necessidades: reduzir custos, otimizar trabalho, melhorar controle financeiro e organizar pedidos/pagamentos.
 
 ### 3.2 Perfis dos Usuários  
 Consumidores que buscam refeições rápidas e práticas, familiarizados com WhatsApp e aplicativos móveis.
@@ -150,7 +153,7 @@ Novo sistema para substituir processo manual, composto por Web (administração)
 
 <br>
 
-### ***Fluxo de atendimento ao cliente***
+### ➡️ ***Fluxo de atendimento ao cliente***
 
 <br>
 
@@ -171,10 +174,11 @@ flowchart TD
 
 
 ```
+
 <br>
 <br>
 
-### ***Fluxo de Interação das Aplicações***
+### ➡️ ***Fluxo de Interação das Aplicações***
 
 <br>
 
@@ -203,6 +207,72 @@ sequenceDiagram
     Chapeiro->>API: Marca pedido como pronto
     API-->>Cliente: Notifica que o pedido está pronto
 
-
-
 ```
+
+<br>
+<br>
+
+### ➡️ ***Protótipo Mobile (Figma)***
+* [Link Figma](https://www.figma.com/design/UX4wHB3jTXKFQXaw4RPY4P/Projeto-Integrador---Food-Truck?node-id=0-1&t=BHeLJxnsuqpjYUT6-1)
+
+<!-- Tela de Login -->
+<div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+  <h2 style="text-align: center;">Tela de Login</h2>
+  <img src="../imagens/Tela de Login.png" alt="Tela de Login" style="max-width: 30%; max-height: 80vh;" />
+</div>
+
+<!-- Tela de Cadastro -->
+<div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+  <h2 style="text-align: center;">Tela de Cadastro</h2>
+  <img src="../imagens/Tela de Cadastro.png" alt="Tela de Cadastro" style="max-width: 30%; max-height: 80vh;" />
+</div>
+
+<!-- Tela Inicial -->
+<div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+  <h2 style="text-align: center;">Tela Inicial</h2>
+  <img src="../imagens/Home.png" alt="Tela Inicial" style="max-width: 30%; max-height: 80vh;" />
+</div>
+
+<!-- Tela de Produto -->
+<div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+  <h2 style="text-align: center;">Tela de Produto</h2>
+  <img src="../imagens/Tela Produto.png" alt="Tela de Produto" style="max-width: 30%; max-height: 80vh;" />
+</div>
+
+<!-- Tela de Carrinho -->
+<div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+  <h2 style="text-align: center;">Tela de Carrinho</h2>
+  <img src="../imagens/Tela Carrinho.png" alt="Tela de Carrinho" style="max-width: 30%; max-height: 80vh;" />
+</div>
+
+<!-- Tela de Pagamento -->
+<div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+  <h2 style="text-align: center;">Tela de Pagamento</h2>
+  <img src="../imagens/Tela Pagamento.png" alt="Tela de Pagamento" style="max-width: 30%; max-height: 80vh;" />
+</div>
+
+<!-- Pop up de Pagamento -->
+<div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+  <h2 style="text-align: center;">Pop up de Pagamento</h2>
+  <img src="../imagens/Tela Pagamento + Pop up.png" alt="Pop up de Pagamento" style="max-width: 30%; max-height: 80vh;" />
+</div>
+
+<!-- Tela de Agradecimento -->
+<div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+  <h2 style="text-align: center;">Tela de Agradecimento</h2>
+  <img src="../imagens/Tela Agradecimento.png" alt="Tela de Agradecimento" style="max-width: 30%; max-height: 80vh;" />
+</div>
+
+<!-- Tela do Chapeiro -->
+<div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+  <h2 style="text-align: center;">Tela do Chapeiro</h2>
+  <img src="../imagens/Tela Chapeiro.png" alt="Tela do Chapeiro" style="max-width: 60%; max-height: 80vh;" />
+</div>
+
+<br>
+<br>
+<br>
+
+
+### ➡️ ***Planejamento das Sprints - 03/10***
+* [Planejamento das Sprints - Entrega 03/10](Planejamento_Sprints_Entrega_03-10.md)
