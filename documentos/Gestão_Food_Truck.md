@@ -218,55 +218,55 @@ sequenceDiagram
 <!-- Tela de Login -->
 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
   <h2 style="text-align: center;">Tela de Login</h2>
-  <img src="../imagens/Tela de Login.png" alt="Tela de Login" style="max-width: 30%; max-height: 80vh;" />
+  <img src="../imagens/Tela de Login.png" alt="Tela de Login" style="width: 30%;" />
 </div>
 
 <!-- Tela de Cadastro -->
 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
   <h2 style="text-align: center;">Tela de Cadastro</h2>
-  <img src="../imagens/Tela de Cadastro.png" alt="Tela de Cadastro" style="max-width: 30%; max-height: 80vh;" />
+  <img src="../imagens/Tela de cadastro.png" alt="Tela de Cadastro" style="width: 30%;" />
 </div>
 
 <!-- Tela Inicial -->
 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
   <h2 style="text-align: center;">Tela Inicial</h2>
-  <img src="../imagens/Home.png" alt="Tela Inicial" style="max-width: 30%; max-height: 80vh;" />
+  <img src="../imagens/Home.png" alt="Tela Inicial" style="width: 30%;" />
 </div>
 
 <!-- Tela de Produto -->
 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
   <h2 style="text-align: center;">Tela de Produto</h2>
-  <img src="../imagens/Tela Produto.png" alt="Tela de Produto" style="max-width: 30%; max-height: 80vh;" />
+  <img src="../imagens/Tela Produto.png" alt="Tela de Produto" style="width: 30%;" />
 </div>
 
 <!-- Tela de Carrinho -->
 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
   <h2 style="text-align: center;">Tela de Carrinho</h2>
-  <img src="../imagens/Tela Carrinho.png" alt="Tela de Carrinho" style="max-width: 30%; max-height: 80vh;" />
+  <img src="../imagens/Tela Carrinho.png" alt="Tela de Carrinho" style="width: 30%;" />
 </div>
 
 <!-- Tela de Pagamento -->
 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
   <h2 style="text-align: center;">Tela de Pagamento</h2>
-  <img src="../imagens/Tela Pagamento.png" alt="Tela de Pagamento" style="max-width: 30%; max-height: 80vh;" />
+  <img src="../imagens/Tela Pagamento.png" alt="Tela de Pagamento" style="width: 30%;" />
 </div>
 
 <!-- Pop up de Pagamento -->
 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
   <h2 style="text-align: center;">Pop up de Pagamento</h2>
-  <img src="../imagens/Tela Pagamento + Pop up.png" alt="Pop up de Pagamento" style="max-width: 30%; max-height: 80vh;" />
+  <img src="../imagens/Tela Pagamento + Pop up.png" alt="Pop up de Pagamento" style="width: 30%;" />
 </div>
 
 <!-- Tela de Agradecimento -->
 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
   <h2 style="text-align: center;">Tela de Agradecimento</h2>
-  <img src="../imagens/Tela Agradecimento.png" alt="Tela de Agradecimento" style="max-width: 30%; max-height: 80vh;" />
+  <img src="../imagens/Tela Agradecimento.png" alt="Tela de Agradecimento" style="width: 30%;" />
 </div>
 
 <!-- Tela do Chapeiro -->
 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
   <h2 style="text-align: center;">Tela do Chapeiro</h2>
-  <img src="../imagens/Tela Chapeiro.png" alt="Tela do Chapeiro" style="max-width: 60%; max-height: 80vh;" />
+  <img src="../imagens/Tela Chapeiro.png" alt="Tela do Chapeiro" style="width: 60%;" />
 </div>
 
 <br>
