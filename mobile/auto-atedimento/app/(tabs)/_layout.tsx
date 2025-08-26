@@ -31,6 +31,7 @@ export default function TabLayout() {
         options={{
           title: 'Tab One',
           tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          headerShown: false, 
           headerRight: () => (
             <Link href="/modal" asChild>
               <Pressable>
