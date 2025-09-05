@@ -1,6 +1,7 @@
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation, Stack, router} from 'expo-router';
 import { useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 
 const adicionais = [
@@ -43,55 +44,61 @@ export default function DetalhesProduto() {
     }, [name]);
 
   return (
-    <View style={styles.containerFull}>
-        <ScrollView>
-            <Image source={image as any} style={styles.image} />
-            <View style={styles.logoPosition}>
-                <Image source={require('../assets/images/Logo.png')} style={styles.logo}  />
-            </View>
-
-            <View style={styles.containerInfos}>
-                <Text style={styles.name}>{name}</Text>
-                <Text style={styles.price}>{price}</Text>
-                <Text style={styles.description}>{description}</Text>
-            </View>
-
-            <View style={styles.containerAdd}>
-                <Text style={styles.titleAdd} >Adicionais</Text>
-                <Text style={styles.textAdd} >Escolha até 2 opções:</Text>
-            </View>
-
-            {adicionais.map((item) => (
-                <View key={item.id} style={styles.opcoesCard}>
-                    <Text style={styles.opName}>{item.nome}</Text>
-                    <View style={styles.cardRight}>
-                        <Image source={item.imagem} style={styles.imgPqn} />
-                        <TouchableOpacity style={styles.addProduct}>
-                            <Text style={styles.opAdd}>+</Text>
-                        </TouchableOpacity>
-                    </View>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.containerFull}>
+            <ScrollView>
+                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <Ionicons name="chevron-back-circle-outline" size={70} color="white" />
+                </TouchableOpacity>
+                <Image source={image as any} style={styles.image} />
+                <View style={styles.logoPosition}>
+                    <Image source={require('../assets/images/Logo.png')} style={styles.logo}  />
                 </View>
-            ))}
 
-            <View style={styles.footer}></View>
-        </ScrollView>
-        <View style={styles.containerCartButtons}>
-            <View style={styles.quantityButton}>
-                <TouchableOpacity style={styles.addProduct1}>
-                    <EvilIcons name="trash" size={60} color="black" />
-                </TouchableOpacity>
+                <View style={styles.containerInfos}>
+                    <Text style={styles.name}>{name}</Text>
+                    <Text style={styles.price}>{price}</Text>
+                    <Text style={styles.description}>{description}</Text>
+                </View>
 
-                <Text style={styles.quantityText}>1</Text> {/* Adicionar contador posteriormente*/}
+                <View style={styles.containerAdd}>
+                    <Text style={styles.titleAdd} >Adicionais</Text>
+                    <Text style={styles.textAdd} >Escolha até 2 opções:</Text>
+                </View>
 
-                <TouchableOpacity style={styles.addProduct}>
-                    <Text style={styles.addButtonText}>+</Text>
+                {adicionais.map((item) => (
+                    <View key={item.id} style={styles.opcoesCard}>
+                        <Text style={styles.opName}>{item.nome}</Text>
+                        <View style={styles.cardRight}>
+                            <Image source={item.imagem} style={styles.imgPqn} />
+                            <TouchableOpacity style={styles.addProduct}>
+                                <Text style={styles.opAdd}>+</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                ))}
+
+                <View style={styles.footer}></View>
+            </ScrollView>
+            <View style={styles.containerCartButtons}>
+                <View style={styles.quantityButton}>
+                    <TouchableOpacity style={styles.addProduct1}>
+                        <EvilIcons name="trash" size={60} color="black" />
+                    </TouchableOpacity>
+
+                    <Text style={styles.quantityText}>1</Text> {/* Adicionar contador posteriormente*/}
+
+                    <TouchableOpacity style={styles.addProduct}>
+                        <Text style={styles.addButtonText}>+</Text>
+                    </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.addCartButton}>
+                    <Text style={styles.addCartText}>Adicionar ao Carrinho</Text>
                 </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.addCartButton}>
-                <Text style={styles.addCartText}>Adicionar ao Carrinho</Text>
-            </TouchableOpacity>
         </View>
-    </View>
+    </>
   );
 }
 
@@ -101,6 +108,13 @@ const styles = StyleSheet.create({
     name: { fontSize: 50, fontWeight: 'bold', marginTop: 20,},
     price: { fontSize: 35, color: '#A11613', marginTop: 10, fontWeight: '500' },
     logo: { height: 184, width: 166, justifyContent: 'center'},
+    backButton: {
+        position: 'absolute',
+        left: 30,
+        top: '3%',
+        transform: [{ translateY: -20 }],
+        zIndex: 1,
+    },
     logoPosition: {
         width: '100%',
         paddingHorizontal: 30,

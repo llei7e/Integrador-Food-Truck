@@ -6,6 +6,7 @@ import { Pressable } from 'react-native';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -38,6 +39,7 @@ export default function TabLayout() {
                 {({ pressed }) => (
                   <FontAwesome
                     name="info-circle"
+                  
                     size={25}
                     color={Colors[colorScheme ?? 'light'].text}
                     style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
@@ -52,7 +54,23 @@ export default function TabLayout() {
         name="carrinho"
         options={{
           title: 'Carrinho',
-          tabBarIcon: ({ color }) => <TabBarIcon name="shopping-cart" color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome6 name="cart-shopping" size={24} color={color} />,
+          headerShown: false, 
+          headerRight: () => (
+            <Link href="/modal" asChild>
+              <Pressable>
+                {({ pressed }) => (
+                  <FontAwesome
+                    name="info-circle"
+
+                    size={25}
+                    color={Colors[colorScheme ?? 'light'].text}
+                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                  />
+                )}
+              </Pressable>
+            </Link>
+          ),
         }}
       />
     </Tabs>
