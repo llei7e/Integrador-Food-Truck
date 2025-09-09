@@ -113,7 +113,12 @@ const styles = StyleSheet.create({
         left: 30,
         top: '3%',
         transform: [{ translateY: -20 }],
-        zIndex: 1,
+        zIndex: 1,  
+        backgroundColor: '#201000ff',
+        borderRadius: 80,
+        height: 70,
+        alignItems: 'center',
+        flexDirection: 'row'
     },
     logoPosition: {
         width: '100%',
