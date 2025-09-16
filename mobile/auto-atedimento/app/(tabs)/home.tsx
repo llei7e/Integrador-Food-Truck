@@ -6,27 +6,27 @@ import { useRouter } from 'expo-router';
 const texto = "Lorem ipsum dolor sit amet. Sed laboriosam assumenda ut explicabo voluptatibus ea nobis iste et consequatur quia quo perspiciatis molestiae ut facere dolor. Quo consequuntur maiores qui magni adipisci et perferendis iusto! Eos impedit voluptatem aut quasi autem qui aperiam eaque. Ut autem molestiae a veniam repellat est facere aliquid qui amet odit est porro veritatis."
 
 const lanches = [ 
-  { id: 100, name: 'Lanche 1', price: 'R$ 20,00', image: require('../../assets/images/lanche1.png'), description: texto }, 
-  { id: 102, name: 'Lanche 2', price: 'R$ 25,00', image: require('../../assets/images/lanche2.png'), description: texto }, 
+  { id: 100, name: 'Lanche 1', price: 'R$ 20,00', image: require('../../assets/images/lanche1.jpg'), description: texto }, 
+  { id: 102, name: 'Lanche 2', price: 'R$ 25,00', image: require('../../assets/images/lanche2.jpeg'), description: texto }, 
   { id: 103, name: 'Lanche 3', price: 'R$ 12,00', image: require('../../assets/images/lanche3.jpg'), description: texto }, 
-  { id: 104, name: 'Lanche 4', price: 'R$ 20,00', image: require('../../assets/images/lanche4.png'), description: texto }, 
-  { id: 105, name: 'Lanche 5', price: 'R$ 25,00', image: require('../../assets/images/lanche5.png'), description: texto }, 
-  { id: 106, name: 'Lanche 6', price: 'R$ 12,00', image: require('../../assets/images/lanche6.png'), description: texto }, 
-  { id: 107, name: 'Lanche 7', price: 'R$ 20,00', image: require('../../assets/images/lanche7.png'), description: texto }, 
-  { id: 108, name: 'Lanche 8', price: 'R$ 25,00', image: require('../../assets/images/lanche8.png'), description: texto }, 
-  { id: 109, name: 'Lanche 9', price: 'R$ 12,00', image: require('../../assets/images/lanche9.png'), description: texto }, 
+  { id: 104, name: 'Lanche 4', price: 'R$ 20,00', image: require('../../assets/images/lanche4.jpg'), description: texto }, 
+  { id: 105, name: 'Lanche 5', price: 'R$ 25,00', image: require('../../assets/images/lanche5.jpg'), description: texto }, 
+  { id: 106, name: 'Lanche 6', price: 'R$ 12,00', image: require('../../assets/images/lanche6.jpg'), description: texto }, 
+  { id: 107, name: 'Lanche 7', price: 'R$ 20,00', image: require('../../assets/images/lanche7.jpg'), description: texto }, 
+  { id: 108, name: 'Lanche 8', price: 'R$ 25,00', image: require('../../assets/images/lanche8.jpg'), description: texto }, 
+  { id: 109, name: 'Lanche 9', price: 'R$ 12,00', image: require('../../assets/images/lanche9.jpg'), description: texto }, 
 ];
 
 const combos = [
-  { id: 200, name: 'Combo 1', price: 'R$ 30,00', image: require('../../assets/images/combo.png'), description: texto },
-  { id: 201, name: 'Combo 2', price: 'R$ 35,00', image: require('../../assets/images/combo.png'), description: texto },
-  { id: 202, name: 'Combo 2', price: 'R$ 35,00', image: require('../../assets/images/combo.png'), description: texto },
+  { id: 200, name: 'Combo 1', price: 'R$ 30,00', image: require('../../assets/images/combos.jpg'), description: texto },
+  { id: 201, name: 'Combo 2', price: 'R$ 35,00', image: require('../../assets/images/combos.jpg'), description: texto },
+  { id: 202, name: 'Combo 2', price: 'R$ 35,00', image: require('../../assets/images/combos.jpg'), description: texto },
 ];
 
 const bebidas = [
-  { id: 300, name: 'Coca-Cola', price: 'R$ 8,00', image: require('../../assets/images/bebidas.png'), description: texto },
-  { id: 301, name: 'Suco', price: 'R$ 6,00', image: require('../../assets/images/bebidas.png'), description: texto },
-  { id: 303, name: 'Suco', price: 'R$ 6,00', image: require('../../assets/images/bebidas.png'), description: texto },
+  { id: 300, name: 'Coca-Cola', price: 'R$ 8,00', image: require('../../assets/images/bebida1.jpg'), description: texto },
+  { id: 301, name: 'Suco', price: 'R$ 6,00', image: require('../../assets/images/bebida1.jpg'), description: texto },
+  { id: 303, name: 'Suco', price: 'R$ 6,00', image: require('../../assets/images/bebida1.jpg'), description: texto },
 ];
 
 export default function TabOneScreen() {
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
     backgroundColor: "#201000ff",
+    height:"20%",
   },
   logo: {
     height: 184,

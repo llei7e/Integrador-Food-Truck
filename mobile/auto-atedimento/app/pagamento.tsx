@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, ActivityIndicator, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Stack } from 'expo-router';
@@ -22,6 +22,7 @@ export default function Pagamento() {
           <>
             <Text style={styles.modalTitle}>Escaneie o QR Code</Text>
             <Image source={require('../assets/images/codigo-qr.png')} style={styles.qrImage} />
+            <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Toque na tela quando o pagamento for confirmado</Text>
           </>
         );
       case 'Cartão Crédito':
@@ -30,6 +31,7 @@ export default function Pagamento() {
           <>
             <Text style={styles.modalTitle}>Aproxime ou insira seu cartão na maquininha ({selectedMethod})</Text>
             <Image source={require('../assets/images/pagamento.png')} style={styles.imgPopup} />
+            <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Toque na tela quando o pagamento for confirmado</Text>
           </>
         );
       case 'Dinheiro':
@@ -37,11 +39,18 @@ export default function Pagamento() {
           <>
             <Text style={styles.modalTitle}>Aguarde o chapeiro...</Text>
             <ActivityIndicator size={200} color="#201000ff" style={{ marginTop: 30 }} />
+            <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Toque na tela quando o pagamento for confirmado</Text>
           </>
         );
       default:
         return null;
     }
+  };
+
+  // Função chamada ao clicar no modal
+  const handleModalClick = () => {
+    setShowModal(false);
+    router.push('/agradecimento'); // Redireciona para a tela de agradecimento
   };
 
   return (
@@ -91,19 +100,17 @@ export default function Pagamento() {
 
         {/* Modal de pagamento */}
         <Modal visible={showModal} transparent animationType="fade">
-          <View style={styles.modalBackground}>
+          <Pressable style={styles.modalBackground} onPress={handleModalClick}>
             <View style={styles.modalContent}>
               {getModalContent()}
-              <TouchableOpacity style={styles.closeButton} onPress={() => setShowModal(false)}>
-                <Text style={styles.closeText}>Fechar</Text>
-              </TouchableOpacity>
             </View>
-          </View>
+          </Pressable>
         </Modal>
       </View>
     </>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -116,7 +123,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    height:"20%",
   },
   headerTitle: {
     flex: 1,
