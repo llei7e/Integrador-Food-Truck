@@ -1,4 +1,5 @@
-import LoginButton from "../components/loginButton"
+import Button from "../components/button"
+import SelectButton from "../components/selectButton"
 import logo from "../public/logo.png"
 import Image from "next/image"
 
@@ -10,21 +11,21 @@ export default function Login() {
       </div>
       <div className="h-dvh w-2/5 bg-[#EFEAEA] flex items-center justify-center">
         <div className="flex flex-col justify-center">
-          <div className="flex justify-center">
-            <Image 
+          <div className="flex justify-center mb-15">
+            <Image
+            priority={false}
             src={logo} 
             alt={"logo"} 
             width={200} 
             height={200}/>
           </div>
-          <text className="text-black justify-start">Email</text>
-          <input className="border-b-2 border-b-black w-170 mb-9 text-gray-700"></input>
-          <text className="text-black">Senha</text>
-          <input className="border-b-2 border-b-black w-170 mb-9 text-gray-700"></input>
-          <text className="text-black">Senha</text>
-          <input className="border-b-2 border-b-black w-170 mb-20 text-gray-700"></input>
+          <SelectButton colorButton1="bg-[#E7E5E5]" colorButton2="bg-[#EA2626]" positionButton1="z-10" positionButton2="z-20"/>
+          <h1 className="text-black justify-start mt-10">Email</h1>
+          <input className="border-b-2 border-b-black w-170 mb-10 text-gray-700"></input>
+          <h1 className="text-black">Senha</h1>
+          <input className="border-b-2 border-b-black w-170 mb-10 text-gray-700"></input>
           <div className="flex justify-center">
-            <LoginButton/>
+            <Button text={"Entrar"} href={"/sales"}/>
           </div>
         </div>
       </div>
