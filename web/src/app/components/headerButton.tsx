@@ -5,7 +5,7 @@ export default function HeaderButton() {
     <>
     <Link href={"/sales"}>
         <button className="hover:bg-gray-400 active:bg-gray-400 rounded-md py-3 px-5 cursor-pointer">
-            Vendas
+            Pedidos
         </button>
     </Link>
 
