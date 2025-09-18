@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { useRouter } from 'expo-router';
+import { RFValue } from 'react-native-responsive-fontsize';
 
 const texto = "Lorem ipsum dolor sit amet. Sed laboriosam assumenda ut explicabo voluptatibus ea nobis iste et consequatur quia quo perspiciatis molestiae ut facere dolor. Quo consequuntur maiores qui magni adipisci et perferendis iusto! Eos impedit voluptatem aut quasi autem qui aperiam eaque. Ut autem molestiae a veniam repellat est facere aliquid qui amet odit est porro veritatis."
 
@@ -20,7 +21,7 @@ const lanches = [
 const combos = [
   { id: 200, name: 'Combo 1', price: 'R$ 30,00', image: require('../../assets/images/combos.jpg'), description: texto },
   { id: 201, name: 'Combo 2', price: 'R$ 35,00', image: require('../../assets/images/combos.jpg'), description: texto },
-  { id: 202, name: 'Combo 2', price: 'R$ 35,00', image: require('../../assets/images/combos.jpg'), description: texto },
+  { id: 202, name: 'Combo 3', price: 'R$ 35,00', image: require('../../assets/images/combos.jpg'), description: texto },
 ];
 
 const bebidas = [
@@ -47,10 +48,7 @@ export default function TabOneScreen() {
       
       <View style={styles.categoryButtons}>
         <TouchableOpacity 
-          style={[
-            styles.categoryButton, 
-            categoria === 'lanches' && { backgroundColor: '#F39D0A' }
-          ]} 
+          style={[styles.categoryButton, categoria === 'lanches' && { backgroundColor: '#F39D0A' }]} 
           onPress={() => setCategoria('lanches')}
         >
           <Image source={require('../../assets/images/lanche.png')} style={styles.img} />
@@ -58,10 +56,7 @@ export default function TabOneScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={[
-            styles.categoryButtonMiddle, 
-            categoria === 'combos' && { backgroundColor: '#F39D0A' }
-          ]} 
+          style={[styles.categoryButtonMiddle, categoria === 'combos' && { backgroundColor: '#F39D0A' }]} 
           onPress={() => setCategoria('combos')}
         >
           <Image source={require('../../assets/images/combo.png')} style={styles.img}/>
@@ -69,10 +64,7 @@ export default function TabOneScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={[
-            styles.categoryButton, 
-            categoria === 'bebidas' && { backgroundColor: '#F39D0A' }
-          ]} 
+          style={[styles.categoryButton, categoria === 'bebidas' && { backgroundColor: '#F39D0A' }]} 
           onPress={() => setCategoria('bebidas')}
         >
           <Image source={require('../../assets/images/bebidas.png')} style={styles.img} />
@@ -89,11 +81,11 @@ export default function TabOneScreen() {
               onPress={() => router.push({
                 pathname: "/detalhesProduto",
                 params: { 
-                          id: item.id.toString(),
-                          name: item.name,
-                          price: item.price,
-                          description: item.description
-                        }
+                  id: item.id.toString(),
+                  name: item.name,
+                  price: item.price,
+                  description: item.description
+                }
               })}
             >
               <View style={styles.menuItem}>
@@ -109,112 +101,100 @@ export default function TabOneScreen() {
   );
 }
 
-
+const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
+  screen: { flex: 1 },
   header: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: "#201000ff",
-    height:"20%",
+    height: "20%",
   },
   logo: {
-    height: 184,
-    width: 166,
+    height: "100%",
+    aspectRatio: 1
   },
   categoryText: {
-    fontSize: 30,
+    fontSize: RFValue(18),
     color: '#fff',
     fontWeight: '500',
-    textShadowColor: '#000',     // cor da sombra
-    textShadowOffset: { width: 1, height: 2 }, // posição da sombra
-    textShadowRadius: 1,         // suavidade / desfoque
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 1,
   },
   categoryButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 20,
+    marginBottom: "5%",
   },
   categoryButton: {
     backgroundColor: '#A11613',
-    paddingVertical: 8,
-    paddingHorizontal: 50,
+    paddingVertical: "2%",
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    maxHeight: 75, 
+    maxHeight: RFValue(75),
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 }, 
     shadowOpacity: 0.4, 
     shadowRadius: 8, 
-    
   },
   categoryButtonMiddle: {
     backgroundColor: '#A11613',
-    paddingVertical: 8,
-    paddingHorizontal: 50,
-    paddingTop: 25, 
+    paddingVertical: RFValue(10),
+    paddingHorizontal: RFValue(10),
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     alignItems: 'center',
-    gap: 5,
+    gap: RFValue(5),
     shadowColor: '#000', 
     shadowOffset: { width: 0, height: 2},
     shadowOpacity: 0.4, 
     shadowRadius: 8, 
   },
   img: {
-    marginTop:-45,
-    width: 100,  
-    height: 70, 
+    marginTop:-RFValue(45),
+    width: RFValue(40),  
+    height: RFValue(30), 
     resizeMode: 'contain', 
   },
-  menuContainer:{
-    padding:10,
-  },
+  menuContainer:{ padding: RFValue(10) },
   itemsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-menuItem: {
-  width: '100%', 
-  backgroundColor: 'white',
-  marginBottom: 15,
-  alignItems: 'center',
-  borderRadius: 20, 
-  elevation: 5, 
-  shadowColor: '#000', 
-  shadowOffset: { width: 0, height: 2 }, 
-  shadowOpacity: 0.2,
-  shadowRadius: 8,
-},
-menuItem1: {
-  width: '32%', 
-},
-
-menuItemImage: {
-  width: '100%',
-  height: 200,
-  resizeMode: 'cover',
-  borderTopLeftRadius: 20, 
-  borderTopRightRadius: 20, 
-  marginBottom: 10,
-},
+  menuItem: {
+    width: '100%', 
+    backgroundColor: 'white',
+    marginBottom: RFValue(15),
+    alignItems: 'center',
+    borderRadius: RFValue(20),
+    elevation: 5,
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  menuItem1: { width: '32%' },
+  menuItemImage: {
+    width: '100%',
+    height: RFValue(200),
+    resizeMode: 'cover',
+    borderTopLeftRadius: RFValue(20),
+    borderTopRightRadius: RFValue(20),
+    marginBottom: RFValue(10),
+  },
   menuItemName: {
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: RFValue(5),
     textAlign: 'center',
   },
-
   menuItemPrice: {
-    fontSize: 14,
+    fontSize: RFValue(14),
     color: '#555',
     textAlign: 'center',
   },
-
 });

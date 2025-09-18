@@ -3,11 +3,11 @@ import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'rea
 import { router } from 'expo-router';
 
 const itensCarrinho = [
-  { id: 1, nome: 'Lanche 1', descricao: 'Picles, hamburguer, alface e tomate', preco: 4.99, imagem: require('../../assets/images/lanche1.png') },
+  { id: 1, nome: 'Lanche 1', descricao: 'Picles, hamburguer, alface e tomate', preco: 4.99, imagem: require('../../assets/images/lanche1.jpg') },
   { id: 2, nome: 'Bebida 1', descricao: 'Copo 700ml', preco: 2.49, imagem: require('../../assets/images/bebidas.png') },
-  { id: 3, nome: 'Lanche 2', descricao: 'Ovo, alface, tomate e hamburguer', preco: 7.99, imagem: require('../../assets/images/lanche2.png') },
+  { id: 3, nome: 'Lanche 2', descricao: 'Ovo, alface, tomate e hamburguer', preco: 7.99, imagem: require('../../assets/images/lanche2.jpeg') },
   { id: 5, nome: 'Lanche 3', descricao: 'Hamburgao brabo', preco: 12, imagem: require('../../assets/images/lanche3.jpg') },
-  { id: 6, nome: 'Lanche 7', descricao: 'Pao com carne moida', preco: 20, imagem: require('../../assets/images/lanche7.png') },
+  { id: 6, nome: 'Lanche 7', descricao: 'Pao com carne moida', preco: 20, imagem: require('../../assets/images/lanche7.jpg') },
 ];
 
 export default function Carrinho() {
@@ -19,17 +19,20 @@ export default function Carrinho() {
         <Text style={styles.headerTitle}>Carrinho</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView>
         {itensCarrinho.map(item => (
           <View key={item.id} style={styles.card}>
-            <Image source={item.imagem} style={styles.cardImage} />
-            <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle}>{item.nome}</Text>
-              <Text style={styles.cardDescription}>{item.descricao}</Text>
+          <View style={styles.line}></View>
+            <View style={styles.inside}>
+              <Image source={item.imagem} style={styles.cardImage} />
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardTitle}>{item.nome}</Text>
+                <Text style={styles.cardDescription}>{item.descricao}</Text>
+              </View>
               <Text style={styles.cardPrice}>${item.preco.toFixed(2)}</Text>
             </View>
           </View>
-        ))}
+        ))} 
         <View style={{ height: 150 }} />
       </ScrollView>
 
@@ -69,30 +72,22 @@ const styles = StyleSheet.create({
     color: 'white',
   },
 
-  scrollContainer: { paddingVertical: 20, paddingLeft: 20, paddingRight: 40 },
 
   card: {
-    flexDirection: 'row',
+    marginTop:-2,
+    marginBottom:40,
     backgroundColor: 'white',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    paddingVertical: 20,
     paddingHorizontal: 25,
-    alignItems: 'center',
     gap: 40,
-
-    // sombra
-    shadowColor: '#000',
-    shadowOffset: { width: -2, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 3,
+  },
+  inside:{
+    flexDirection: 'row',
+    alignItems:"center"
   },
   cardImage: { width: 150, height: 150, borderRadius: 20, marginRight: 15 },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 40, fontWeight: 'bold' },
-  cardDescription: { fontSize: 25, color: '#555', marginVertical: 10 },
+  cardDescription: { fontSize: 25, color: '#555', marginRight:20 },
   cardPrice: { fontSize: 34, fontWeight: 'bold' },
 
   footer: {
@@ -118,4 +113,9 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   paymentText: { color: 'white', fontSize: 30, fontWeight: 'bold' },
+  line:{
+    width:"100%",
+    borderTopWidth: 2,
+    borderColor: "black",
+  }
 });

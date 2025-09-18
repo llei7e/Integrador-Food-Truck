@@ -1,4 +1,4 @@
-import { View, Text, Image, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Stack, router } from 'expo-router'; // << importa o router
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 
 export default function Login() {
-  const [activeTab, setActiveTab] = useState<"cadastro" | "login">("cadastro");
+  const [activeTab, setActiveTab] = useState<"cadastro" | "login">("login");
 
   // States do formulário
   const [nome, setNome] = useState("");
@@ -160,7 +160,10 @@ export default function Login() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.submitButton}>
+              <TouchableOpacity 
+                style={styles.submitButton} 
+                onPress={() => setActiveTab("login")}
+              >
                 <Text style={styles.submitText}>Cadastrar</Text>
               </TouchableOpacity>
             </View>
@@ -278,13 +281,13 @@ tabTextActive: {
   },
   lower:{
     backgroundColor: "white",
-    width: "100%",
-    height: "75%",
+    width: "90%",
+    height: "65%",
     alignItems: "center",
-    borderTopEndRadius: 80,
-    borderTopLeftRadius: 80,
+    borderRadius: 60,
+    marginHorizontal: "5%",
     gap: 80,
-    paddingTop: 150,
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
