@@ -13,28 +13,28 @@ const adicionais = [
 
 
 const images: any = {
-  100: require('../assets/images/lanche1.png'),
-  102: require('../assets/images/lanche2.png'),
+  100: require('../assets/images/lanche1.jpg'),
+  102: require('../assets/images/lanche2.jpeg'),
   103: require('../assets/images/lanche3.jpg'),
-  104: require('../assets/images/lanche4.png'),
-  105: require('../assets/images/lanche5.png'), 
-  106: require('../assets/images/lanche6.png'), 
-  107: require('../assets/images/lanche7.png'), 
-  108: require('../assets/images/lanche8.png'), 
-  109: require('../assets/images/lanche9.png'), 
+  104: require('../assets/images/lanche4.jpg'),
+  105: require('../assets/images/lanche5.jpg'), 
+  106: require('../assets/images/lanche6.jpg'), 
+  107: require('../assets/images/lanche7.jpg'), 
+  108: require('../assets/images/lanche8.jpg'), 
+  109: require('../assets/images/lanche9.jpg'), 
 
-  200: require('../assets/images/combo.png'),
-  201: require('../assets/images/combo.png'),
-  202: require('../assets/images/combo.png'),
+  200: require('../assets/images/combos.jpg'),
+  201: require('../assets/images/combos.jpg'),
+  202: require('../assets/images/combos.jpg'),
 
-  300: require('../assets/images/bebidas.png'),
-  301: require('../assets/images/bebidas.png'),
-  303: require('../assets/images/bebidas.png'),
+  300: require('../assets/images/bebida1.jpg'),
+  301: require('../assets/images/bebida1.jpg'),
+  303: require('../assets/images/bebida1.jpg'),
 };
 
 export default function DetalhesProduto() {
   const { id, name, price, description } = useLocalSearchParams();
-  const image = images[id as string]; // converte o id em string p/ mapear
+  const image = images[id as string];
 
   const navigation = useNavigation();
 
@@ -113,7 +113,12 @@ const styles = StyleSheet.create({
         left: 30,
         top: '3%',
         transform: [{ translateY: -20 }],
-        zIndex: 1,
+        zIndex: 1,  
+        backgroundColor: '#201000ff',
+        borderRadius: 80,
+        height: 70,
+        alignItems: 'center',
+        flexDirection: 'row'
     },
     logoPosition: {
         width: '100%',
