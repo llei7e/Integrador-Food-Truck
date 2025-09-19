@@ -1,11 +1,7 @@
-import Divider from "./components/divider";
-import Header from "./components/Header";
+import Login from "./login/page";
 
 export default function Page() {
   return (
-    <div className="m-5">
-      <Header />
-      <Divider/>
-    </div>
+    <Login/>
   );
 }
