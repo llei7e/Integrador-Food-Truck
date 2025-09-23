@@ -53,10 +53,10 @@ function RootLayoutNav() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="agradecimento" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="detalhesProduto" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="login" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="pagamento" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="agradecimento" />
+        <Stack.Screen name="detalhesProduto" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="pagamento" />
       </Stack>
     </ThemeProvider>
   );
