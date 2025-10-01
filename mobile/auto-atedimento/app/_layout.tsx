@@ -7,15 +7,14 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 
 function AppStack() {
   const { user, loading } = useAuth();
-
-  if (loading) return null; // ou algum loader
+  if (loading) return null;
 
   return (
-    <Stack>
+    <Stack screenOptions={{ headerShown: false }}> {/* <- aqui */}
       {user ? (
-        <Stack.Screen name="(tabs)/home" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)/home" />
       ) : (
-        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="login" />
       )}
     </Stack>
   );
