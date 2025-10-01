@@ -1,9 +1,10 @@
 import { View, Text, Image, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { Stack, router } from 'expo-router'; // << importa o router
+import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { useAuth } from '../../context/AuthContext';
+import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
 
 export default function Login() {
   const [activeTab, setActiveTab] = useState<"cadastro" | "login">("login");
@@ -13,17 +14,47 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = () => {
-    // Aqui você poderia validar email/senha antes
-    router.push("/(tabs)/home"); 
+  const { signIn, signUp } = useAuth();
+
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      return Alert.alert("Ops", "Preencha e-mail e senha.");
+    }
+
+    setSubmitting(true);
+    try {
+      await signIn(email.trim().toLowerCase(), password);
+      router.replace("/(tabs)/home"); // redireciona após login
+    } catch (e: any) {
+      Alert.alert("Erro", e?.message ?? "Falha no login");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!nome.trim() || !email.trim() || !password.trim()) {
+      return Alert.alert("Ops", "Preencha todos os campos.");
+    }
+
+    setSubmitting(true);
+    try {
+      await signUp(nome.trim(), email.trim().toLowerCase(), password);
+      router.replace("/(tabs)/home"); // redireciona após cadastro
+    } catch (e: any) {
+      Alert.alert("Erro", e?.message ?? "Falha no cadastro");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient
-        colors={["#7E0000", "#520000"]} // degrade vermelho → rosa
+        colors={["#7E0000", "#520000"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 0 }}
         style={styles.containerFull}
@@ -31,11 +62,10 @@ export default function Login() {
         <View style={styles.higher}>
           <View style={styles.headerTexts}>
             <Text style={styles.headerText}>Seja Bem Vindo!</Text>
-            <Text style={styles.headerText}>Faça o Login</Text>
+            <Text style={styles.headerText}>{activeTab === "login" ? "Faça o Login" : "Cadastre-se"}</Text>
           </View>
-          {/* Logo */}
           <Image
-            source={require("../assets/images/Logo.png")}
+            source={require("../../assets/images/Logo.png")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -108,8 +138,12 @@ export default function Login() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.submitButton} onPress={handleLogin}>
-                <Text style={styles.submitText}>Entrar</Text>
+              <TouchableOpacity
+                style={[styles.submitButton, { opacity: submitting ? 0.7 : 1 }]}
+                onPress={handleLogin}
+                disabled={submitting}
+              >
+                <Text style={styles.submitText}>{submitting ? "Entrando..." : "Entrar"}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -160,11 +194,12 @@ export default function Login() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity 
-                style={styles.submitButton} 
-                onPress={() => setActiveTab("login")}
+              <TouchableOpacity
+                style={[styles.submitButton, { opacity: submitting ? 0.7 : 1 }]}
+                onPress={handleRegister}
+                disabled={submitting}
               >
-                <Text style={styles.submitText}>Cadastrar</Text>
+                <Text style={styles.submitText}>{submitting ? "Cadastrando..." : "Cadastrar"}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -233,7 +268,7 @@ tabTextActive: {
 
   inputs: {
     gap: 30,
-    width: "70%",
+    width: "80%",
     alignItems: 'center'
   },
   inputContainer: {
@@ -248,7 +283,7 @@ tabTextActive: {
     flex: 1,
     fontSize: 28,
     color: "#000",
-    paddingBottom: 15,
+    paddingBottom: RFPercentage(3),
     paddingTop: 10,
     paddingLeft: 0, // garante alinhamento
   },
@@ -256,7 +291,7 @@ tabTextActive: {
     marginHorizontal: 5,
   },
   submitButton: {
-    marginTop: 50,
+    marginTop: RFPercentage(5),
     backgroundColor: "#7E0000",
     paddingVertical: 25,
     borderRadius: 50,
@@ -277,17 +312,18 @@ tabTextActive: {
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    height: "25%"
+    height: "25%",
   },
   lower:{
-    backgroundColor: "white",
-    width: "90%",
+    marginTop: RFPercentage(2),
+    backgroundColor: "#fffbfb",
+    width: "70%",
     height: "65%",
+    marginHorizontal: "15%",
+    borderRadius: 40,
     alignItems: "center",
-    borderRadius: 60,
-    marginHorizontal: "5%",
-    gap: 80,
     justifyContent: "center",
+    gap: RFPercentage(5),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
