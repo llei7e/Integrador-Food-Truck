@@ -1,6 +1,5 @@
-// src/main/java/com/foodtruck/api/controller/CategoriaController.java
+
 package com.foodtruck.api.controller;
-import org.springframework.http.ResponseEntity;
 import java.util.List;
 
 
@@ -11,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping({"/api/categoria"})
+
 public class CategoriaController {
   private final CategoriaRepository repo;
   public CategoriaController(CategoriaRepository repo) { this.repo = repo; }
