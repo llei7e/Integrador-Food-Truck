@@ -1,9 +1,16 @@
+"use client";
+
 import Button from "../components/button"
 import SelectButton from "../components/selectButton"
+import OffEye from "../public/favicon/off_eye"
+import OnEye from "../public/favicon/on_eye"
 import logo from "../public/logo.png"
 import Image from "next/image"
+import { useState } from "react";
 
 export default function Login() {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <div className="flex h-dvh w-full">
       <div className="hidden md:block md:w-3/5 bg-amber-600">
@@ -29,7 +36,19 @@ export default function Login() {
           <input className="border-b-2 border-b-black w-full mb-10 text-gray-700"></input>
           
           <h1 className="text-black">Senha</h1>
-          <input className="border-b-2 border-b-black w-full mb-10 text-gray-700"></input>
+          <div className="relative w-full mb-10">
+            <input
+              type={showPassword ? "text" : "password"}
+              className="border-b-2 border-b-black w-full text-gray-700 pr-10"
+            />
+
+            <div
+              className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <OnEye/> : <OffEye/>}
+            </div>
+          </div>
          
           <div className="flex justify-center">
             <Button text={"Entrar"} href={"/sales"}/>
