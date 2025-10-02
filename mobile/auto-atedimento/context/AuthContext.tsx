@@ -48,10 +48,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       client_secret: "",
     });
 
-    const res = await fetch(`${BASE_URL}/auth/login`, {
+    const res = await fetch(`${BASE_URL}/login`, {
       method: "POST",
-      headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
-      body: body.toString(),
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
     });
 
     let data: any = null; try { data = await res.json(); } catch {}
@@ -66,11 +66,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signUp(name: string, email: string, password: string) {
-    const res = await fetch(`${BASE_URL}/auth/register`, {
-      method: "POST",
-      headers: { Accept: "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, role: "user" }),
+    const res = await fetch(`${BASE_URL}/register`, {
+        method: "POST",
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password, role: "user" }),
     });
+
 
     let data: any = null; try { data = await res.json(); } catch {}
     if (!res.ok) throw new ApiError(data?.message || data?.detail || `Erro ${res.status}`, res.status, data);

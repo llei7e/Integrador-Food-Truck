@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions, Text, View  } from 'react-native';
 import { useRouter } from 'expo-router';
 import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
+import { useAuth } from '../../context/AuthContext';
 
 const texto = "Lorem ipsum dolor sit amet. Sed laboriosam assumenda ut explicabo voluptatibus ea nobis iste et consequatur quia quo perspiciatis molestiae ut facere dolor. Quo consequuntur maiores qui magni adipisci et perferendis iusto! Eos impedit voluptatem aut quasi autem qui aperiam eaque. Ut autem molestiae a veniam repellat est facere aliquid qui amet odit est porro veritatis."
 
@@ -30,6 +31,7 @@ const bebidas = [
 ];
 
 export default function TabOneScreen() {
+  const { user, loading } = useAuth();
   const [categoria, setCategoria] = useState<'lanches' | 'combos' | 'bebidas'>('lanches');
   const router = useRouter();
 
@@ -38,6 +40,16 @@ export default function TabOneScreen() {
     if (categoria === 'combos') return combos;
     return bebidas;
   };
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/login"); // redireciona para login se não estiver autenticado
+    }
+  }, [user, loading]);
+
+  if (loading || !user) {
+    return null; // ou um <ActivityIndicator /> se quiser mostrar carregando
+  }
 
   return (
     <View style={styles.screen}>

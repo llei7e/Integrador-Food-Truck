@@ -1,8 +1,8 @@
 import { Platform } from "react-native";
 import { getToken } from "./storage";
 
-const WEB_OR_IOS = "http://localhost:8000";   // Web / iOS simulador
-const ANDROID_EMULATOR = "http://10.0.2.2:8000"; // Android emulador
+const WEB_OR_IOS = "http://localhost:8080";   // Web / iOS simulador
+const ANDROID_EMULATOR = "http://10.0.2.2:8080"; // Android emulador
 export const BASE_URL = Platform.OS === "android" ? ANDROID_EMULATOR : WEB_OR_IOS;
 // export const BASE_URL = "http://SEU-IP-LOCAL:8000";
 
