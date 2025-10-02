@@ -7,7 +7,7 @@ interface ButtonsProps {
 
 export default function SelectButton({ colorButton1, colorButton2 }: ButtonsProps) {
   return (
-    <div className="flex justify-center gap-4 sm:gap-6 md:gap-8 mb-6">
+    <div className="flex justify-center gap-4 sm:gap-6 md:gap-8 mb-2">
       <Link href="/register">
         <button
           className={`
