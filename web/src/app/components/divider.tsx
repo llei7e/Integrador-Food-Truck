@@ -1,7 +1,7 @@
 export default function Divider() {
     return (
         <>
-            <hr className="border-2 border-gray-700"/>
+            <hr className="border-1 border-gray-700 mb-2"/>
         </>
     )
 }
