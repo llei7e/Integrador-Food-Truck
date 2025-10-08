@@ -1,39 +1,41 @@
-import { useState, useEffect } from 'react';
+// app/(protected)/(tabs)/home.tsx
+import { useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions, Text, View  } from 'react-native';
 import { useRouter } from 'expo-router';
 import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext'; // Import adicionado
 
 const texto = "Lorem ipsum dolor sit amet. Sed laboriosam assumenda ut explicabo voluptatibus ea nobis iste et consequatur quia quo perspiciatis molestiae ut facere dolor. Quo consequuntur maiores qui magni adipisci et perferendis iusto! Eos impedit voluptatem aut quasi autem qui aperiam eaque. Ut autem molestiae a veniam repellat est facere aliquid qui amet odit est porro veritatis."
 
 const lanches = [ 
-  { id: 100, name: 'Lanche 1', price: 'R$ 20,00', image: require('../../assets/images/lanche1.jpg'), description: texto }, 
-  { id: 102, name: 'Lanche 2', price: 'R$ 25,00', image: require('../../assets/images/lanche2.jpeg'), description: texto }, 
-  { id: 103, name: 'Lanche 3', price: 'R$ 12,00', image: require('../../assets/images/lanche3.jpg'), description: texto }, 
-  { id: 104, name: 'Lanche 4', price: 'R$ 20,00', image: require('../../assets/images/lanche4.jpg'), description: texto }, 
-  { id: 105, name: 'Lanche 5', price: 'R$ 25,00', image: require('../../assets/images/lanche5.jpg'), description: texto }, 
-  { id: 106, name: 'Lanche 6', price: 'R$ 12,00', image: require('../../assets/images/lanche6.jpg'), description: texto }, 
-  { id: 107, name: 'Lanche 7', price: 'R$ 20,00', image: require('../../assets/images/lanche7.jpg'), description: texto }, 
-  { id: 108, name: 'Lanche 8', price: 'R$ 25,00', image: require('../../assets/images/lanche8.jpg'), description: texto }, 
-  { id: 109, name: 'Lanche 9', price: 'R$ 12,00', image: require('../../assets/images/lanche9.jpg'), description: texto }, 
+  { id: 100, name: 'Lanche 1', price: 'R$ 20,00', image: require('../../../assets/images/lanche1.jpg'), description: texto },
+  { id: 102, name: 'Lanche 2', price: 'R$ 25,00', image: require('../../../assets/images/lanche2.jpeg'), description: texto }, 
+  { id: 103, name: 'Lanche 3', price: 'R$ 12,00', image: require('../../../assets/images/lanche3.jpg'), description: texto }, 
+  { id: 104, name: 'Lanche 4', price: 'R$ 20,00', image: require('../../../assets/images/lanche4.jpg'), description: texto }, 
+  { id: 105, name: 'Lanche 5', price: 'R$ 25,00', image: require('../../../assets/images/lanche5.jpg'), description: texto }, 
+  { id: 106, name: 'Lanche 6', price: 'R$ 12,00', image: require('../../../assets/images/lanche6.jpg'), description: texto }, 
+  { id: 107, name: 'Lanche 7', price: 'R$ 20,00', image: require('../../../assets/images/lanche7.jpg'), description: texto }, 
+  { id: 108, name: 'Lanche 8', price: 'R$ 25,00', image: require('../../../assets/images/lanche8.jpg'), description: texto }, 
+  { id: 109, name: 'Lanche 9', price: 'R$ 12,00', image: require('../../../assets/images/lanche9.jpg'), description: texto }, 
 ];
 
 const combos = [
-  { id: 200, name: 'Combo 1', price: 'R$ 30,00', image: require('../../assets/images/combos.jpg'), description: texto },
-  { id: 201, name: 'Combo 2', price: 'R$ 35,00', image: require('../../assets/images/combos.jpg'), description: texto },
-  { id: 202, name: 'Combo 3', price: 'R$ 35,00', image: require('../../assets/images/combos.jpg'), description: texto },
+  { id: 200, name: 'Combo 1', price: 'R$ 30,00', image: require('../../../assets/images/combos.jpg'), description: texto },
+  { id: 201, name: 'Combo 2', price: 'R$ 35,00', image: require('../../../assets/images/combos.jpg'), description: texto },
+  { id: 202, name: 'Combo 3', price: 'R$ 35,00', image: require('../../../assets/images/combos.jpg'), description: texto },
 ];
 
 const bebidas = [
-  { id: 300, name: 'Coca-Cola', price: 'R$ 8,00', image: require('../../assets/images/bebida1.jpg'), description: texto },
-  { id: 301, name: 'Suco', price: 'R$ 6,00', image: require('../../assets/images/bebida1.jpg'), description: texto },
-  { id: 303, name: 'Suco', price: 'R$ 6,00', image: require('../../assets/images/bebida1.jpg'), description: texto },
+  { id: 300, name: 'Coca-Cola', price: 'R$ 8,00', image: require('../../../assets/images/bebida1.jpg'), description: texto },
+  { id: 301, name: 'Suco', price: 'R$ 6,00', image: require('../../../assets/images/bebida1.jpg'), description: texto },
+  { id: 303, name: 'Suco', price: 'R$ 6,00', image: require('../../../assets/images/bebida1.jpg'), description: texto },
 ];
 
+
 export default function TabOneScreen() {
-  const { user, loading } = useAuth();
   const [categoria, setCategoria] = useState<'lanches' | 'combos' | 'bebidas'>('lanches');
   const router = useRouter();
+  const { signOut } = useAuth(); // Pega a função signOut do contexto
 
   const getItems = () => {
     if (categoria === 'lanches') return lanches;
@@ -41,20 +43,10 @@ export default function TabOneScreen() {
     return bebidas;
   };
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login"); // redireciona para login se não estiver autenticado
-    }
-  }, [user, loading]);
-
-  if (loading || !user) {
-    return null; // ou um <ActivityIndicator /> se quiser mostrar carregando
-  }
-
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <Image source={require('../../assets/images/Logo.png')} style={styles.logo} />
+        <Image source={require('../../../assets/images/Logo.png')} style={styles.logo} />
       </View>
       
       <View style={styles.categoryButtons}>
@@ -62,7 +54,7 @@ export default function TabOneScreen() {
           style={[styles.categoryButton, categoria === 'lanches' && { backgroundColor: '#F39D0A' }]} 
           onPress={() => setCategoria('lanches')}
         >
-          <Image source={require('../../assets/images/lanche.png')} style={styles.img} />
+          <Image source={require('../../../assets/images/lanche.png')} style={styles.img} />
           <Text style={styles.categoryText}>Lanches</Text>
         </TouchableOpacity>
 
@@ -70,7 +62,7 @@ export default function TabOneScreen() {
           style={[styles.categoryButtonMiddle, categoria === 'combos' && { backgroundColor: '#F39D0A' }]} 
           onPress={() => setCategoria('combos')}
         >
-          <Image source={require('../../assets/images/combo.png')} style={styles.img}/>
+          <Image source={require('../../../assets/images/combo.png')} style={styles.img}/>
           <Text style={styles.categoryText}>Combos</Text>
         </TouchableOpacity>
 
@@ -78,7 +70,7 @@ export default function TabOneScreen() {
           style={[styles.categoryButton, categoria === 'bebidas' && { backgroundColor: '#F39D0A' }]} 
           onPress={() => setCategoria('bebidas')}
         >
-          <Image source={require('../../assets/images/bebidas.png')} style={styles.img} />
+          <Image source={require('../../../assets/images/bebidas.png')} style={styles.img} />
           <Text style={styles.categoryText}>Bebidas</Text>
         </TouchableOpacity>
       </View>
@@ -90,7 +82,7 @@ export default function TabOneScreen() {
               key={item.id} 
               style={styles.menuItem1}
               onPress={() => router.push({
-                pathname: "/detalhesProduto",
+                pathname: "/detalhesProduto", 
                 params: { 
                   id: String(item.id),
                   name: item.name,
@@ -117,13 +109,30 @@ export default function TabOneScreen() {
           ))}
         </View>
       </ScrollView>
+
+      {/* Botão de Logout para teste */}
+      <TouchableOpacity 
+        onPress={signOut} 
+        style={{ 
+          backgroundColor: 'red', 
+          padding: 15, 
+          alignItems: 'center', 
+          position: 'absolute', 
+          bottom: 20, 
+          right: 20,
+          borderRadius: 10,
+          zIndex: 10 // Garante que o botão fique sobre outros elementos
+        }}
+      >
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>SAIR (LOGOUT)</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
+// ... (seus estilos originais)
 const { width } = Dimensions.get('window');
 const isMobile = width <= 768; // celular vs tablet
-
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   
@@ -140,7 +149,7 @@ const styles = StyleSheet.create({
   },
 
   categoryText: {
-    fontSize: RFValue(16), // ajustado para responsividade
+    fontSize: RFValue(16),
     color: '#fff',
     fontWeight: '500',
     textShadowColor: '#000',
@@ -209,13 +218,11 @@ const styles = StyleSheet.create({
     width: '32.5%',
     marginBottom: RFValue(10),
   },
-
-// cards
   menuItem: {
     backgroundColor: '#fff',
     borderRadius: RFValue(20),
     overflow: 'hidden',
-    height: isMobile ? RFPercentage(20) : RFPercentage(20), // mais baixo no celular
+    height: isMobile ? RFPercentage(20) : RFPercentage(20),
     justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -226,14 +233,14 @@ const styles = StyleSheet.create({
 
   menuItemImage: {
     width: '100%',
-    height: isMobile ? '65%' : '65%', // ajustar a proporção da imagem no celular
+    height: isMobile ? '65%' : '65%',
     resizeMode: 'cover',
   },
 
   cardTextContainer: {
     flexDirection: 'row',
     width: '100%',
-    height: isMobile ? '35%' : '35%', // mais espaço para texto no celular
+    height: isMobile ? '35%' : '35%',
   },
 
   cardLeft: {
@@ -249,14 +256,14 @@ const styles = StyleSheet.create({
   },
 
   menuItemName: {
-    fontSize: isMobile ? RFValue(10) : RFValue(14), // menor no celular
+    fontSize: isMobile ? RFValue(10) : RFValue(14),
     fontWeight: 'bold',
     marginVertical: RFValue(2),
     marginHorizontal: isMobile ? RFValue(0) : RFValue(5),
   },
 
   menuItemPrice: {
-    fontSize: isMobile ? RFValue(10) : RFValue(12), // menor no celular
+    fontSize: isMobile ? RFValue(10) : RFValue(12),
     color: '#555',
     marginBottom: RFValue(3),
     marginHorizontal: isMobile ? RFValue(0) : RFValue(5),
@@ -286,4 +293,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
