@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Button from "../components/button"
+import Button from "../components/ui/button"
 import SelectButton from "../components/selectButton"
 import logo from "../public/logo.png"
 import Image from "next/image"

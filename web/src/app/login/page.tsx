@@ -1,6 +1,6 @@
 "use client";
 
-import Button from "../components/button"
+import Button from "../components/ui/button"
 import SelectButton from "../components/selectButton"
 import OffEye from "../public/favicon/off_eye"
 import OnEye from "../public/favicon/on_eye"
