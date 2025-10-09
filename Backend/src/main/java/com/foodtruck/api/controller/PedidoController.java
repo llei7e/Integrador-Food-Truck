@@ -1,7 +1,6 @@
 package com.foodtruck.api.controller;
 
 import com.foodtruck.domain.model.Pedido;
-import com.foodtruck.domain.model.Produto;
 import com.foodtruck.domain.service.PedidoService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -14,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.util.List;
-import java.util.Optional;
+
 
 
 @RestController
