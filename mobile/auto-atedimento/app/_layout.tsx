@@ -1,30 +1,24 @@
 // app/_layout.tsx
-import React from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
-import { Slot, Stack } from "expo-router";
-import { AuthProvider, useAuth } from "../context/AuthContext";
+import React from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { Stack } from 'expo-router';
+import { AuthProvider } from '../context/AuthContext';
 
-function AppStack() {
-  const { user, loading } = useAuth();
-  if (loading) return null;
-
-  return (
-    <Stack screenOptions={{ headerShown: false }}> {/* <- aqui */}
-      {user ? (
-        <Stack.Screen name="(tabs)/home" />
-      ) : (
-        <Stack.Screen name="login" />
-      )}
-    </Stack>
-  );
-}
+// Este componente não é mais necessário aqui, a lógica foi movida
+// function AppStack() { ... }
 
 function Frame() {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <StatusBar style="dark" />
-      <AppStack />
+      {/* A Stack agora define os grupos de rotas principais.
+        O Expo Router e os layouts de cada grupo cuidarão do resto.
+      */}
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(protected)" />
+      </Stack>
     </SafeAreaView>
   );
 }
