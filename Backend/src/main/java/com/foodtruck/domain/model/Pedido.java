@@ -25,7 +25,7 @@ public class Pedido {
   @Column(nullable = false)
   private String status; // RECEBIDO/EM_PREPARO/...
 
-  @Column(nullable = false)
+  @Column(nullable = false) 
   private Integer total; // centavos
 
   @CreationTimestamp

@@ -46,41 +46,31 @@ public class AuthService {
 
         userRepo.save(u);
 
-        String token = jwtUtils.generateJwtTokenByUserId(u.getId()); // ou por email/username conforme sua implementação
+        var userDetails = com.foodtruck.security.UserDetailsImpl.build(u);
+        String token = jwtUtils.generateJwtToken(userDetails); // <-- usa email no subject + claim "roles"
         return new AuthResponse(token, "bearer",
                 new UserView(u.getId(), u.getName(), u.getEmail(),
-                        rn == RoleName.ROLE_ADMIN ? "admin" : "user"));
+                        (role.getName().name().equals("ROLE_ADMIN") ? "admin" : "user")));
     }
 
     public AuthResponse login(LoginRequest req) {
         // autentica usando email como principal
         Authentication auth = authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(req.email(), req.password())
-        );
+            new UsernamePasswordAuthenticationToken(req.email(), req.password())
+    );
 
-        // se você usa UserDetailsImpl, recupere o ID/email dali
-        var principal = auth.getPrincipal(); // UserDetailsImpl
-        Long userId;
-        String name;
-        String email;
-        String roleStr = "user";
+    // pega o usuário autenticado
+    var principal = (com.foodtruck.security.UserDetailsImpl) auth.getPrincipal();
 
-        if (principal instanceof com.foodtruck.security.UserDetailsImpl p) {
-            userId = p.getId();
-            name = p.getName();           
-            email = p.getEmail();         
-            roleStr = p.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")) ? "admin" : "user";
-        } else {
-            // fallback buscando no repo
-            var user = userRepo.findByEmail(req.email())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas"));
-            userId = user.getId();
-            name = user.getName();
-            email = user.getEmail();
-            roleStr = user.getRoles().stream().anyMatch(r -> r.getName().name().equals("ROLE_ADMIN")) ? "admin" : "user";
-        }
+    // gera token com email no subject e claim "roles"
+    String token = jwtUtils.generateJwtToken(principal);
 
-        String token = jwtUtils.generateJwtTokenByUserId(userId);
-        return new AuthResponse(token, "bearer", new UserView(userId, name, email, roleStr));
-    }
+    Long userId = principal.getId();
+    String name = principal.getName();
+    String email = principal.getEmail();
+    String roleStr = principal.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")) ? "admin" : "user";
+
+    return new AuthResponse(token, "bearer", new UserView(userId, name, email, roleStr));
+}
 }
