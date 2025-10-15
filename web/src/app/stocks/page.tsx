@@ -1,6 +1,7 @@
 import Filter from "../components/filter";
 import Header from "../components/header";
-import Table from "../components/table";
+import Table from "../components/tableIngredient";
+import Card from "../components/ui/card";
 
 export default function Trucks() {
   return (
@@ -10,7 +11,21 @@ export default function Trucks() {
           <Filter placeholder="Truck: Truck A" icon="bx:calendar" />
           <Filter placeholder="Data: 10/08/2025 - 20/08/2025" icon="tabler:search" />
         </div>
-        <Table/>
+        <div className="flex">
+          <Table/>
+          <Card 
+            Title="Itens Faltando" 
+            iconColor="red" 
+            iconImage="solar:danger-triangle-bold"/>
+          <Card 
+            Title="Item Faltando" 
+            iconColor="red" 
+            iconImage="solar:danger-triangle-bold"/>
+          <Card 
+            Title="Item Faltando" 
+            iconColor="red" 
+            iconImage="solar:danger-triangle-bold"/>
+        </div>
       </div>
   )
 }
