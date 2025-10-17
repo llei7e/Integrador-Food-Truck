@@ -15,15 +15,15 @@ export default function Trucks() {
           <Table/>
           <Card 
             Title="Itens Faltando" 
-            iconColor="red" 
+            iconColor="gray" 
             iconImage="solar:danger-triangle-bold"/>
           <Card 
             Title="Item Faltando" 
-            iconColor="red" 
+            iconColor="gray" 
             iconImage="solar:danger-triangle-bold"/>
           <Card 
             Title="Item Faltando" 
-            iconColor="red" 
+            iconColor="gray" 
             iconImage="solar:danger-triangle-bold"/>
         </div>
       </div>
