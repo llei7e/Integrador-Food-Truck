@@ -4,28 +4,22 @@ interface statusProps {
 
 export default function Status({ text }: statusProps) {
   let bg = '';
-  let border = '';
   let color = '';
 
-  if (text === 'Suficiente') {
+  if (text === 'Suficiente' || text === 'Concluído') {
     bg = 'bg-green-200';
-    border = 'border-green-500';
     color = 'text-green-500';
-  } else if (text === 'Alerta') {
+  } else if (text === 'Alerta' || text === 'Em preparo') {
     bg = 'bg-orange-200';
-    border = 'border-orange-500';
-    color = 'text-orange-500';
-  } else if (text === 'Em falta') {
+    color = 'text-orange-400';
+  } else if (text === 'Em falta' || text === 'Cancelado') {
     bg = 'bg-red-200';
-    border = 'border-red-500';
     color = 'text-red-500';
   }
 
   return (
-    <div className={`h-7 w-30 ${bg} ${border} rounded-2xl border-2 flex items-center justify-center`}>
-      <span className={color}>
-        {text}
-      </span>
-    </div>
+    <span className={`${color} ${bg} h-7 w-30 flex items-center justify-center text-xs font-medium me-2 px-2.5 py-0.5 rounded-full`}>
+      {text}
+    </span>
   );
 }
