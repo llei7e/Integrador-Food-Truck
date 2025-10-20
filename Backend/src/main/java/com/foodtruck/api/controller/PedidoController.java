@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.util.List;
-import java.util.Optional;
+
 
 
 @RestController
@@ -44,9 +44,17 @@ public class PedidoController {
     return ResponseEntity.status(201).body(p);
   }
 
-  @GetMapping("/{id}")
-  public ResponseEntity<Pedido> buscar(@PathVariable Long id) {
-    Optional<Pedido> op = pedidoService.buscar(id);
-    return op.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+  @GetMapping
+  public ResponseEntity<List<Pedido>> listar() {
+    return ResponseEntity.ok(pedidoService.listar());
   }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> deletar(@PathVariable Long id) {
+    if (!pedidoService.existe(id)) return ResponseEntity.notFound().build();
+    pedidoService.deletar(id);
+    return ResponseEntity.noContent().build(); // 204
+  }
+
+
 }

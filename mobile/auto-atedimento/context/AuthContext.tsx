@@ -25,13 +25,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+useEffect(() => {
     (async () => {
       try {
-        const { token, user } = await getAuth();
-        if (token && user) setUser(user);
-        else await clearAuth();
+        // Limpa qualquer sessão anterior ao iniciar o app.
+        await clearAuth();
       } finally {
+        // Finaliza o carregamento para a tela de login aparecer.
         setLoading(false);
       }
     })();

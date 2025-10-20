@@ -5,31 +5,31 @@ import { Ionicons } from '@expo/vector-icons';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 
 const adicionais = [
-  { id: 1, nome: "Carne Fatiada", imagem: require('../assets/images/Carne.png') },
-  { id: 2, nome: "Queijo", imagem: require('../assets/images/queijo.png') },
-  { id: 3, nome: "Maionese", imagem: require('../assets/images/maio.jpg') },
-  { id: 4, nome: "Bacon", imagem: require('../assets/images/bacon.jpg') }, // pode adicionar mais
+    { id: 1, nome: "Carne Fatiada", imagem: require('../../assets/images/Carne.png') },
+    { id: 2, nome: "Queijo", imagem: require('../../assets/images/queijo.png') },
+    { id: 3, nome: "Maionese", imagem: require('../../assets/images/maio.jpg') },
+    { id: 4, nome: "Bacon", imagem: require('../../assets/images/bacon.jpg') }, // pode adicionar mais
 ];
 
 
 const images: any = {
-  100: require('../assets/images/lanche1.jpg'),
-  102: require('../assets/images/lanche2.jpeg'),
-  103: require('../assets/images/lanche3.jpg'),
-  104: require('../assets/images/lanche4.jpg'),
-  105: require('../assets/images/lanche5.jpg'), 
-  106: require('../assets/images/lanche6.jpg'), 
-  107: require('../assets/images/lanche7.jpg'), 
-  108: require('../assets/images/lanche8.jpg'), 
-  109: require('../assets/images/lanche9.jpg'), 
+    100: require('../../assets/images/lanche1.jpg'),
+    102: require('../../assets/images/lanche2.jpeg'),
+    103: require('../../assets/images/lanche3.jpg'),
+    104: require('../../assets/images/lanche4.jpg'),
+    105: require('../../assets/images/lanche5.jpg'), 
+    106: require('../../assets/images/lanche6.jpg'), 
+    107: require('../../assets/images/lanche7.jpg'), 
+    108: require('../../assets/images/lanche8.jpg'), 
+    109: require('../../assets/images/lanche9.jpg'), 
 
-  200: require('../assets/images/combos.jpg'),
-  201: require('../assets/images/combos.jpg'),
-  202: require('../assets/images/combos.jpg'),
+    200: require('../../assets/images/combos.jpg'),
+    201: require('../../assets/images/combos.jpg'),
+    202: require('../../assets/images/combos.jpg'),
 
-  300: require('../assets/images/bebida1.jpg'),
-  301: require('../assets/images/bebida1.jpg'),
-  303: require('../assets/images/bebida1.jpg'),
+    300: require('../../assets/images/bebida1.jpg'),
+    301: require('../../assets/images/bebida1.jpg'),
+    303: require('../../assets/images/bebida1.jpg'),
 };
 
 export default function DetalhesProduto() {
@@ -53,7 +53,7 @@ export default function DetalhesProduto() {
                 </TouchableOpacity>
                 <Image source={image as any} style={styles.image} />
                 <View style={styles.logoPosition}>
-                    <Image source={require('../assets/images/Logo.png')} style={styles.logo}  />
+                    <Image source={require('../../assets/images/Logo.png')} style={styles.logo}  />
                 </View>
 
                 <View style={styles.containerInfos}>
