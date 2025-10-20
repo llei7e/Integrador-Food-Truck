@@ -14,7 +14,7 @@ export default function Trucks() {
       <div>
         <div className="flex justify-evenly">
           <Card 
-            Title="Média de Vendas" 
+            Title="Vendas do Dia" 
             iconColor="gray" 
             iconImage="tdesign:money"/>
           <Card 
@@ -22,11 +22,11 @@ export default function Trucks() {
             iconColor="gray" 
             iconImage="tdesign:money"/>
           <Card 
-            Title="Média de Vendas" 
+            Title="Pedidos" 
             iconColor="gray" 
             iconImage="tdesign:money"/>
           <Card 
-            Title="Média de Vendas" 
+            Title="Ticket Médio" 
             iconColor="gray" 
             iconImage="tdesign:money"/>
         </div>
