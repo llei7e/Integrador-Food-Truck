@@ -1,7 +1,7 @@
 import Filter from "../components/filter";
 import Header from "../components/header";
 import MapView from "../components/map";
-import TableChartTruck from "../components/tableChartTruck";
+import ChartTruck from "../components/ChartTruck";
 import Table from "../components/tableTruck";
 import Card from "../components/ui/card";
 
@@ -45,7 +45,7 @@ export default function Trucks() {
           <div className="ml-5 mt-4 flex">
             <Table/>
             <div className="ml-5 mt-2">
-              <TableChartTruck/>
+              <ChartTruck/>
             </div>
           </div>
         </div>
