@@ -3,11 +3,11 @@ import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'rea
 import { router } from 'expo-router';
 
 const itensCarrinho = [
-  { id: 1, nome: 'Lanche 1', descricao: 'Picles, hamburguer, alface e tomate', preco: 4.99, imagem: require('../../assets/images/lanche1.jpg') },
-  { id: 2, nome: 'Bebida 1', descricao: 'Copo 700ml', preco: 2.49, imagem: require('../../assets/images/bebidas.png') },
-  { id: 3, nome: 'Lanche 2', descricao: 'Ovo, alface, tomate e hamburguer', preco: 7.99, imagem: require('../../assets/images/lanche2.jpeg') },
-  { id: 5, nome: 'Lanche 3', descricao: 'Hamburgao brabo', preco: 12, imagem: require('../../assets/images/lanche3.jpg') },
-  { id: 6, nome: 'Lanche 7', descricao: 'Pao com carne moida', preco: 20, imagem: require('../../assets/images/lanche7.jpg') },
+  { id: 1, nome: 'Lanche 1', descricao: 'Picles, hamburguer, alface e tomate', preco: 4.99, imagem: require('../../../assets/images/lanche1.jpg') },
+  { id: 2, nome: 'Bebida 1', descricao: 'Copo 700ml', preco: 2.49, imagem: require('../../../assets/images/bebidas.png') },
+  { id: 3, nome: 'Lanche 2', descricao: 'Ovo, alface, tomate e hamburguer', preco: 7.99, imagem: require('../../../assets/images/lanche2.jpeg') },
+  { id: 5, nome: 'Lanche 3', descricao: 'Hamburgao brabo', preco: 12, imagem: require('../../../assets/images/lanche3.jpg') },
+  { id: 6, nome: 'Lanche 7', descricao: 'Pao com carne moida', preco: 20, imagem: require('../../../assets/images/lanche7.jpg') },
 ];
 
 export default function Carrinho() {

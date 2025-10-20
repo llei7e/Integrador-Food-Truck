@@ -20,7 +20,7 @@ export default function Agradecimento() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Image
-            source={require("../assets/images/Logo.png")}
+            source={require("../../assets/images/Logo.png")}
             style={styles.logo}
           />
         </View>
@@ -31,7 +31,7 @@ export default function Agradecimento() {
               <Text style={styles.message}>Tenha uma ótima refeição e volte sempre</Text>
             </View>
             <Image
-              source={require('../assets/images/check.png')}
+              source={require('../../assets/images/check.png')}
               style={styles.checkIcon}
             />
           </View>

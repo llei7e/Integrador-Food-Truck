@@ -21,7 +21,7 @@ export default function Pagamento() {
         return (
           <>
             <Text style={styles.modalTitle}>Escaneie o QR Code</Text>
-            <Image source={require('../assets/images/codigo-qr.png')} style={styles.qrImage} />
+            <Image source={require('../../assets/images/codigo-qr.png')} style={styles.qrImage} />
             <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Toque na tela quando o pagamento for confirmado</Text>
           </>
         );
@@ -30,7 +30,7 @@ export default function Pagamento() {
         return (
           <>
             <Text style={styles.modalTitle}>Aproxime ou insira seu cartão na maquininha ({selectedMethod})</Text>
-            <Image source={require('../assets/images/pagamento.png')} style={styles.imgPopup} />
+            <Image source={require('../../assets/images/pagamento.png')} style={styles.imgPopup} />
             <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Toque na tela quando o pagamento for confirmado</Text>
           </>
         );

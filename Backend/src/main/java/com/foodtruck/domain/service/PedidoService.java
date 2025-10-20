@@ -52,8 +52,21 @@ public class PedidoService {
     return pedidoRepo.save(pedido);
   }
 
-  public Optional<Pedido> buscar(Long id) {
-    return pedidoRepo.findById(id);
+  public List<Pedido> listar() {
+    return pedidoRepo.findAll();
+  }
+
+  @jakarta.transaction.Transactional
+  public void deletar(Long id) {
+    if (!pedidoRepo.existsById(id)) {
+      throw new org.springframework.web.server.ResponseStatusException(
+        org.springframework.http.HttpStatus.NOT_FOUND, "Pedido não encontrado");
+    }
+    pedidoRepo.deleteById(id);
+  }
+
+  public boolean existe(Long id) {
+    return pedidoRepo.existsById(id);
   }
 
   // DTO interno simples para service
