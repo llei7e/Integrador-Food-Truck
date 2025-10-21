@@ -9,7 +9,8 @@ export default function MapView() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (L.Icon.Default.prototype as any)._getIconUrl; //ignore eslint
       L.Icon.Default.mergeOptions({
         iconRetinaUrl:
           "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
