@@ -1,0 +1,60 @@
+package com.foodtruck.api.controller;
+
+import com.foodtruck.domain.model.Pedido;
+import com.foodtruck.domain.service.PedidoService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+
+import java.util.List;
+
+
+
+@RestController
+@RequestMapping("/api/pedidos")
+@RequiredArgsConstructor
+@Validated
+public class PedidoController {
+
+  private final PedidoService pedidoService;
+
+  public record ItemPedidoCreateDto(
+      @NotNull Long produtoId,
+      @NotNull @Positive Integer quantidade
+  ) {}
+
+  public record PedidoCreateDto(
+      @NotNull Long usuarioId,
+      @NotNull Long foodtruckId,
+      @NotEmpty List<@Valid ItemPedidoCreateDto> itens
+  ) {}
+
+  @PostMapping
+  public ResponseEntity<Pedido> criar(@RequestBody @Valid PedidoCreateDto dto) {
+    var itens = dto.itens().stream()
+        .map(i -> new PedidoService.Item(i.produtoId(), i.quantidade()))
+        .toList();
+    Pedido p = pedidoService.criar(dto.usuarioId(), dto.foodtruckId(), itens);
+    return ResponseEntity.status(201).body(p);
+  }
+
+  @GetMapping
+  public ResponseEntity<List<Pedido>> listar() {
+    return ResponseEntity.ok(pedidoService.listar());
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> deletar(@PathVariable Long id) {
+    if (!pedidoService.existe(id)) return ResponseEntity.notFound().build();
+    pedidoService.deletar(id);
+    return ResponseEntity.noContent().build(); // 204
+  }
+
+
+}
