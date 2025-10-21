@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./frontend
+        working-directory: ./web
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: web/package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci
@@ -37,13 +37,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage
-          path: frontend/coverage/
+          path: web/coverage/
 
   test-backend:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./backend
+        working-directory: ./Backend
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'maven'
-          cache-dependency-path: backend/pom.xml
+          cache-dependency-path: Backend/pom.xml
 
       - name: Install backend dependencies & run tests
         run: mvn clean test --batch-mode
@@ -64,14 +64,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
-          path: backend/target/site/jacoco/
+          path: Backend/target/site/jacoco/
 
   build-frontend:
     needs: test-frontend
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./frontend
+        working-directory: ./web
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -92,14 +92,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: frontend/build/
+          path: web/build/
 
   build-backend:
     needs: test-backend
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./backend
+        working-directory: ./Backend
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -120,4 +120,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-jar
-          path: backend/target/*.jar
+          path: Backend/target/*.jar
