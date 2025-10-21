@@ -47,6 +47,22 @@ export default function TabOneScreen() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Image source={require('../../../assets/images/Logo.png')} style={styles.logo} />
+              {/* Botão de Logout para teste */}
+      <TouchableOpacity 
+        onPress={signOut} 
+        style={{ 
+          backgroundColor: '#A11613', 
+          padding: 15, 
+          paddingHorizontal: 20, 
+          alignItems: 'center', 
+          position: 'absolute', 
+          top: 20, 
+          right: 20,
+          borderRadius: 10,
+        }}
+      >
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>SAIR</Text>
+      </TouchableOpacity>
       </View>
       
       <View style={styles.categoryButtons}>
@@ -110,27 +126,11 @@ export default function TabOneScreen() {
         </View>
       </ScrollView>
 
-      {/* Botão de Logout para teste */}
-      <TouchableOpacity 
-        onPress={signOut} 
-        style={{ 
-          backgroundColor: 'red', 
-          padding: 15, 
-          alignItems: 'center', 
-          position: 'absolute', 
-          bottom: 20, 
-          right: 20,
-          borderRadius: 10,
-          zIndex: 10 // Garante que o botão fique sobre outros elementos
-        }}
-      >
-        <Text style={{ color: 'white', fontWeight: 'bold' }}>SAIR (LOGOUT)</Text>
-      </TouchableOpacity>
+
     </View>
   );
 }
 
-// ... (seus estilos originais)
 const { width } = Dimensions.get('window');
 const isMobile = width <= 768; // celular vs tablet
 const styles = StyleSheet.create({
