@@ -57,6 +57,19 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
+			<!-- Spring Security OAuth2 Client -->
+		<dependency>
+    		<groupId>org.springframework.boot</groupId>
+    		<artifactId>spring-boot-starter-oauth2-client</artifactId>
+		</dependency>
+
+		
+		<!-- Suporte JOSE/JWT (opcional, mas útil para ID Token / claims) -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-oauth2-jose</artifactId>
+		</dependency>
+
 		<dependency>
   			<groupId>org.springdoc</groupId>
   			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -101,7 +114,15 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-	</dependencies>
+
+		<dependency>
+			<groupId>com.google.api-client</groupId>
+			<artifactId>google-api-client</artifactId>
+			<version>2.6.0</version>
+			</dependency>
+		</dependencies>
+		
+
 
 	<build>
 		<plugins>
