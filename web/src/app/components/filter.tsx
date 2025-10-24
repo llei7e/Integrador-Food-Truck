@@ -1,4 +1,4 @@
-import IconFilter from "./iconFilter";
+import IconFilter from "./ui/iconFilter";
 
 interface filterProps {
   placeholder: string;
