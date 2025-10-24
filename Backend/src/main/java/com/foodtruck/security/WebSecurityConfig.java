@@ -24,8 +24,11 @@ import java.util.Arrays;
 @RequiredArgsConstructor
 public class WebSecurityConfig {
 
-    // REMOVIDO: private final UserDetailsServiceImpl userDetailsService;
     private final AuthTokenFilter authTokenFilter;
+
+    // ADICIONE estes dois: (já devem existir como @Service/@Component)
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
@@ -38,7 +41,8 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         var cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(Arrays.asList("http://localhost:3000","http://localhost:8081","http://localhost:19006"));
+        cfg.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000","http://localhost:8081","http://localhost:19006"));
         cfg.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
         cfg.setAllowedHeaders(Arrays.asList("*"));
         cfg.setAllowCredentials(true);
@@ -57,12 +61,22 @@ public class WebSecurityConfig {
                 .requestMatchers("/swagger","/swagger/**","/swagger-ui.html","/swagger-ui/**",
                                  "/v3/api-docs","/v3/api-docs/**","/v3/api-docs.yaml").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+
+                // LIBERAR endpoints do fluxo OAuth2 (redirect do Spring)
+                .requestMatchers("/oauth2/**", "/login/**", "/login/oauth2/**").permitAll()
+
                 .requestMatchers("/h2-console/**", "/api/test/all").permitAll()
                 .requestMatchers("/api/test/admin").hasRole("ADMIN")
                 .requestMatchers("/api/test/user").hasAnyRole("USER","ADMIN")
                 .anyRequest().authenticated()
             )
-            .headers(h -> h.frameOptions(f -> f.disable()));
+            .headers(h -> h.frameOptions(f -> f.disable()))
+
+            // HABILITAR O FLUXO OAUTH2 (redirecionamento p/ Google)
+            .oauth2Login(o -> o
+                .userInfoEndpoint(u -> u.userService(customOAuth2UserService))
+                .successHandler(oAuth2SuccessHandler)
+            );
 
         http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
