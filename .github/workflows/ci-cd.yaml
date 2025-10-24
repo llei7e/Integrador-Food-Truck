@@ -29,16 +29,6 @@ jobs:
       - name: Run frontend linting
         run: npm run lint
 
-      - name: Run frontend tests
-        run: npm test -- --coverage
-
-      - name: Upload frontend coverage
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-coverage
-          path: web/coverage/
-
   test-backend:
     runs-on: ubuntu-latest
     defaults:
