@@ -27,7 +27,18 @@ jobs:
         run: npm ci
 
       - name: Run frontend linting
-        run: npm run lint
+        run: npm run lint -- --max-warnings=5
+
+      - name: Run frontend tests
+        run: npm test -- --coverage --watchAll=false
+
+      - name: Upload frontend coverage report
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: web/coverage/
+          retention-days: 7
 
   test-backend:
     runs-on: ubuntu-latest
