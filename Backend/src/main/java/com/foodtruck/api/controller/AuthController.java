@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/auth/")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -23,5 +23,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest req) {
         return ResponseEntity.ok(authService.login(req));
-    }
+    } 
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> google(@RequestBody @Valid GoogleLoginRequest req) {
+        return ResponseEntity.ok(authService.loginComGoogle(req));
+}
 }
