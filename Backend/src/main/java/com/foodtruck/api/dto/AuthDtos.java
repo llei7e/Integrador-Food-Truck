@@ -1,4 +1,3 @@
-    
 package com.foodtruck.api.dto;
 
 import jakarta.validation.constraints.Email;
@@ -10,7 +9,7 @@ public class AuthDtos {
             @NotBlank String name,
             @Email @NotBlank String email,
             @NotBlank String password,
-            String role // "user" por padrão no service
+            String role
     ) {}
 
     public record LoginRequest(
@@ -21,4 +20,7 @@ public class AuthDtos {
     public record UserView(Long id, String name, String email, String role) {}
 
     public record AuthResponse(String access_token, String token_type, UserView user) {}
+
+
+    public record GoogleLoginRequest(@NotBlank String idToken) {}
 }
