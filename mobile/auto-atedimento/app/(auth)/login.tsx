@@ -234,15 +234,28 @@ export default function Login() {
 								{errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 							</View>
 
-							<TouchableOpacity
-								style={[styles.submitButton, { opacity: submitting ? 0.7 : 1 }]}
-								onPress={handleLogin}
-								disabled={submitting}
-							>
-								<Text style={styles.submitText}>
-									{submitting ? 'Entrando...' : 'Entrar'}
-								</Text>
-							</TouchableOpacity>
+							<View style={styles.buttonsContainer}>
+								<TouchableOpacity
+									style={[styles.submitButton, { opacity: submitting ? 0.7 : 1 }]}
+									onPress={handleLogin}
+									disabled={submitting}
+								>
+									<Text style={styles.submitText}>
+										{submitting ? 'Entrando...' : 'Entrar'}
+									</Text>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={[{ opacity: submitting ? 0.7 : 1 }]}
+									// onPress={}
+									disabled={submitting}
+								>
+									<Image
+										source={require('../../assets/images/logoGoogle.png')}
+										style={styles.logoGoogle}
+										resizeMode="contain"
+									/>
+								</TouchableOpacity>
+							</View>
 						</View>
 					)}
 
@@ -346,6 +359,15 @@ export default function Login() {
 const styles = StyleSheet.create({
 	containerFull: { flex: 1, backgroundColor: '#EFEAEA' },
 	logo: { height: RFPercentage(16), width: RFPercentage(16) },
+	logoGoogle: { 
+		height: RFPercentage(10), 
+		width: RFPercentage(10), 
+		borderRadius: 30, 
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 5 },
+		shadowOpacity: 0.4,
+		shadowRadius: 3
+	},
 	LoginRegister: {
 		flexDirection: 'row',
 		backgroundColor: '#ddd',
@@ -402,14 +424,13 @@ const styles = StyleSheet.create({
 	submitButton: {
 		backgroundColor: '#7E0000',
 		paddingVertical: RFPercentage(2),
+		paddingHorizontal: wp(10),
 		borderRadius: RFPercentage(6),
 		alignItems: 'center',
 		shadowColor: '#000',
 		shadowOffset: { width: 5, height: 5 },
 		shadowOpacity: 0.4,
 		shadowRadius: 6,
-		width: '60%',
-    marginTop: RFPercentage(3),
 	},
 	submitText: { color: '#fff', fontSize: RFPercentage(2.5), fontWeight: 'bold' },
 	errorContainer: {
@@ -456,4 +477,11 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 	},
 	realTimeErrorText: { color: '#D32F2F', fontSize: RFPercentage(1.7) },
+	buttonsContainer:{ 
+		width: '100%',
+		flexDirection: 'row', 
+		justifyContent: 'space-between',
+		alignItems: 'center', 
+		marginTop: RFPercentage(3)
+	}
 });
