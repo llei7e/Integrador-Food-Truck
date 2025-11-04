@@ -1,52 +1,191 @@
 // app/(protected)/(tabs)/home.tsx
-import { useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions, Text, View  } from 'react-native';
+import { useState, useEffect } from 'react';
+import { 
+  StyleSheet, 
+  Image, 
+  TouchableOpacity, 
+  ScrollView, 
+  Dimensions, 
+  Text, 
+  View,
+  ActivityIndicator,
+  ImageSourcePropType // Importa o tipo de imagem
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
-import { useAuth } from '../../../context/AuthContext'; // Import adicionado
+import { useAuth } from '../../../context/AuthContext';
+import { api, ApiError } from '../../../lib/api'; 
 
-const texto = "Lorem ipsum dolor sit amet. Sed laboriosam assumenda ut explicabo voluptatibus ea nobis iste et consequatur quia quo perspiciatis molestiae ut facere dolor. Quo consequuntur maiores qui magni adipisci et perferendis iusto! Eos impedit voluptatem aut quasi autem qui aperiam eaque. Ut autem molestiae a veniam repellat est facere aliquid qui amet odit est porro veritatis."
+// --- Interface para o produto vindo da API ---
+interface Produto {
+  id: number;
+  nome: string;
+  descricao: string;
+  preco: number;
+  ativo: boolean;
+  categoriaId: number; 
+}
 
-const lanches = [ 
-  { id: 100, name: 'Lanche 1', price: 'R$ 20,00', image: require('../../../assets/images/lanche1.jpg'), description: texto },
-  { id: 102, name: 'Lanche 2', price: 'R$ 25,00', image: require('../../../assets/images/lanche2.jpeg'), description: texto }, 
-  { id: 103, name: 'Lanche 3', price: 'R$ 12,00', image: require('../../../assets/images/lanche3.jpg'), description: texto }, 
-  { id: 104, name: 'Lanche 4', price: 'R$ 20,00', image: require('../../../assets/images/lanche4.jpg'), description: texto }, 
-  { id: 105, name: 'Lanche 5', price: 'R$ 25,00', image: require('../../../assets/images/lanche5.jpg'), description: texto }, 
-  { id: 106, name: 'Lanche 6', price: 'R$ 12,00', image: require('../../../assets/images/lanche6.jpg'), description: texto }, 
-  { id: 107, name: 'Lanche 7', price: 'R$ 20,00', image: require('../../../assets/images/lanche7.jpg'), description: texto }, 
-  { id: 108, name: 'Lanche 8', price: 'R$ 25,00', image: require('../../../assets/images/lanche8.jpg'), description: texto }, 
-  { id: 109, name: 'Lanche 9', price: 'R$ 12,00', image: require('../../../assets/images/lanche9.jpg'), description: texto }, 
-];
+// --- Imagens por Categoria (ALTERAÇÃO 1) ---
+const lancheImage = require('../../../assets/images/lanche1.jpg');
+const comboImage = require('../../../assets/images/combos.jpg');
+const bebidaImage = require('../../../assets/images/bebida1.jpg');
 
-const combos = [
-  { id: 200, name: 'Combo 1', price: 'R$ 30,00', image: require('../../../assets/images/combos.jpg'), description: texto },
-  { id: 201, name: 'Combo 2', price: 'R$ 35,00', image: require('../../../assets/images/combos.jpg'), description: texto },
-  { id: 202, name: 'Combo 3', price: 'R$ 35,00', image: require('../../../assets/images/combos.jpg'), description: texto },
-];
+// --- Função Helper para formatar preço ---
+const formatPrice = (price: number): string => {
+  return `R$ ${price.toFixed(2).replace('.', ',')}`;
+};
 
-const bebidas = [
-  { id: 300, name: 'Coca-Cola', price: 'R$ 8,00', image: require('../../../assets/images/bebida1.jpg'), description: texto },
-  { id: 301, name: 'Suco', price: 'R$ 6,00', image: require('../../../assets/images/bebida1.jpg'), description: texto },
-  { id: 303, name: 'Suco', price: 'R$ 6,00', image: require('../../../assets/images/bebida1.jpg'), description: texto },
-];
+// --- Função Helper para selecionar a imagem (ALTERAÇÃO 2) ---
+const getImageForItem = (categoriaId: number): ImageSourcePropType => {
+  switch (categoriaId) {
+    case 1:
+      return lancheImage;
+    case 2:
+      return comboImage;
+    case 3:
+      return bebidaImage;
+    default:
+      return lancheImage; // Padrão
+  }
+};
 
 
 export default function TabOneScreen() {
   const [categoria, setCategoria] = useState<'lanches' | 'combos' | 'bebidas'>('lanches');
-  const router = useRouter();
-  const { signOut } = useAuth(); // Pega a função signOut do contexto
+  
+  // --- Estados para dados da API ---
+  const [allProdutos, setAllProdutos] = useState<Produto[]>([]); // Guarda TODOS os produtos
+  const [displayedItems, setDisplayedItems] = useState<Produto[]>([]); // Guarda os produtos filtrados
+  
+  const [loading, setLoading] = useState(true); // Começa true para a busca inicial
+  const [error, setError] = useState<string | null>(null);
 
-  const getItems = () => {
-    if (categoria === 'lanches') return lanches;
-    if (categoria === 'combos') return combos;
-    return bebidas;
+  const router = useRouter();
+  const { signOut } = useAuth();
+
+  // --- Hook para BUSCAR dados da API (roda UMA VEZ) ---
+  useEffect(() => {
+    const fetchAllItems = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Usa a função 'api' com autenticação para buscar TUDO
+        const data: Produto[] = await api('/api/produtos', { auth: true });
+        setAllProdutos(data.filter(p => p.ativo)); 
+      } catch (e: any) {
+        console.error(e);
+        if (e instanceof ApiError) {
+          setError(`Erro ${e.status}: ${e.message}`);
+        } else {
+          setError('Não foi possível carregar os produtos.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllItems();
+  }, []); // Array vazio: roda apenas na montagem do componente
+
+  // --- Hook para FILTRAR os produtos (roda quando a categoria ou os produtos mudam) ---
+  useEffect(() => {
+    let categoryIdToFilter: number;
+    
+    if (categoria === 'lanches') {
+      categoryIdToFilter = 1;
+    } else if (categoria === 'combos') {
+      categoryIdToFilter = 2;
+    } else { // 'bebidas'
+      categoryIdToFilter = 3;
+    }
+
+    // Filtra a lista principal baseado no ID da categoria
+    const filtered = allProdutos.filter(
+      produto => produto.categoriaId === categoryIdToFilter 
+    );
+    
+    setDisplayedItems(filtered);
+
+  }, [categoria, allProdutos]); // Depende da 'categoria' e de 'allProdutos'
+
+  // --- Função para renderizar o conteúdo (Loading, Erro, Lista ou Vazio) ---
+  const renderContent = () => {
+    if (loading) {
+      return <ActivityIndicator size="large" color="#A11613" style={styles.centered} />;
+    }
+
+    if (error) {
+      return <Text style={styles.errorText}>{error}</Text>;
+    }
+
+    // Só mostra "Nenhum item" se não estiver carregando e a lista estiver vazia
+    if (!loading && displayedItems.length === 0) {
+      return <Text style={styles.emptyText}>Nenhum item encontrado para esta categoria.</Text>;
+    }
+
+    // Renderiza a lista de itens filtrados
+    return (
+      <View style={styles.itemsContainer}>
+        {displayedItems.map(item => (
+          <TouchableOpacity 
+            key={item.id} 
+            style={styles.menuItem1}
+            onPress={() => router.push({
+              pathname: "/detalhesProduto", 
+              params: { 
+                id: String(item.id),
+                name: item.nome,
+                price: formatPrice(item.preco),
+                description: item.descricao,
+              },
+            })}
+          >
+            <View style={styles.menuItem}>
+              
+              {/* --- (ALTERAÇÃO 3) --- */}
+              <Image 
+                source={getImageForItem(item.categoriaId)} 
+                style={styles.menuItemImage} 
+              />
+              
+              <View style={styles.cardTextContainer}>
+                <View style={styles.cardLeft}>
+                  <Text style={styles.menuItemName}>{item.nome}</Text>
+                  <Text style={styles.menuItemPrice}>{formatPrice(item.preco)}</Text>
+                </View>
+                <View style={styles.cardRight} >
+                  <TouchableOpacity style={styles.addProduct}>
+                      <Text style={styles.addButtonText}>Carrinho</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
   };
 
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
         <Image source={require('../../../assets/images/Logo.png')} style={styles.logo} />
+        <TouchableOpacity 
+          onPress={signOut} 
+          style={{ 
+            backgroundColor: '#A11613', 
+            padding: 15, 
+            paddingHorizontal: 20, 
+            alignItems: 'center', 
+            position: 'absolute', 
+            top: 20, 
+            right: 20,
+            borderRadius: 10,
+          }}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>SAIR</Text>
+        </TouchableOpacity>
       </View>
       
       <View style={styles.categoryButtons}>
@@ -76,61 +215,13 @@ export default function TabOneScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.menuContainer}>
-        <View style={styles.itemsContainer}>
-          {getItems().map(item => (
-            <TouchableOpacity 
-              key={item.id} 
-              style={styles.menuItem1}
-              onPress={() => router.push({
-                pathname: "/detalhesProduto", 
-                params: { 
-                  id: String(item.id),
-                  name: item.name,
-                  price: item.price,
-                  description: item.description,
-                },
-              })}
-            >
-              <View style={styles.menuItem}>
-                <Image source={item.image} style={styles.menuItemImage} />
-                <View style={styles.cardTextContainer}>
-                  <View style={styles.cardLeft}>
-                    <Text style={styles.menuItemName}>{item.name}</Text>
-                    <Text style={styles.menuItemPrice}>{item.price}</Text>
-                  </View>
-                  <View style={styles.cardRight} >
-                    <TouchableOpacity style={styles.addProduct}>
-                        <Text style={styles.addButtonText}>Carrinho</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {renderContent()}
       </ScrollView>
-
-      {/* Botão de Logout para teste */}
-      <TouchableOpacity 
-        onPress={signOut} 
-        style={{ 
-          backgroundColor: 'red', 
-          padding: 15, 
-          alignItems: 'center', 
-          position: 'absolute', 
-          bottom: 20, 
-          right: 20,
-          borderRadius: 10,
-          zIndex: 10 // Garante que o botão fique sobre outros elementos
-        }}
-      >
-        <Text style={{ color: 'white', fontWeight: 'bold' }}>SAIR (LOGOUT)</Text>
-      </TouchableOpacity>
     </View>
   );
 }
 
-// ... (seus estilos originais)
+// --- ESTILOS ---
 const { width } = Dimensions.get('window');
 const isMobile = width <= 768; // celular vs tablet
 const styles = StyleSheet.create({
@@ -206,6 +297,7 @@ const styles = StyleSheet.create({
 
   menuContainer: { 
     padding: RFValue(5),
+    flexGrow: 1, 
   },
 
   itemsContainer: {
@@ -222,7 +314,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: RFValue(20),
     overflow: 'hidden',
-    height: isMobile ? RFPercentage(20) : RFPercentage(20),
+    height: isMobile ? RFPercentage(20) : RFPercentage(25),
     justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -244,29 +336,33 @@ const styles = StyleSheet.create({
   },
 
   cardLeft: {
-    width: '60%',
-    justifyContent: 'center',
-    paddingHorizontal: RFValue(5),
+    width: '65%', // (Estilo da sua última versão)
+    justifyContent: 'space-between', // (Estilo da sua última versão)
+    paddingHorizontal: RFValue(0), // (Estilo da sua última versão)
   },
 
   cardRight: {
-    width: '40%',
+    width: '35%', // (Estilo da sua última versão)
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   menuItemName: {
-    fontSize: isMobile ? RFValue(10) : RFValue(14),
-    fontWeight: 'bold',
+    fontSize: isMobile ? RFValue(10) : RFValue(14), // (Estilo da sua última versão)
+    fontWeight: '400', // (Estilo da sua última versão)
     marginVertical: RFValue(2),
     marginHorizontal: isMobile ? RFValue(0) : RFValue(5),
+    flexShrink: 1, 
   },
 
   menuItemPrice: {
-    fontSize: isMobile ? RFValue(10) : RFValue(12),
-    color: '#555',
+    fontSize: isMobile ? RFValue(11) : RFValue(13), // (Estilo da sua última versão)
+    color: '#aa6c00ff', // (Estilo da sua última versão)
     marginBottom: RFValue(3),
     marginHorizontal: isMobile ? RFValue(0) : RFValue(5),
+    position: 'absolute', // (Estilo da sua última versão)
+    right: 0, // (Estilo da sua última versão)
+    bottom: 0, // (Estilo da sua última versão)
   },
 
   addProduct: {
@@ -291,5 +387,23 @@ const styles = StyleSheet.create({
     paddingVertical: RFValue(3),
     color: "#FFFFFF",
     textAlign: 'center',
+  },
+
+  centered: {
+    marginTop: RFValue(50),
+  },
+  errorText: {
+    textAlign: 'center',
+    color: '#A11613',
+    fontSize: RFValue(14),
+    marginTop: RFValue(50),
+    paddingHorizontal: RFValue(20),
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#555',
+    fontSize: RFValue(14),
+    marginTop: RFValue(50),
+    paddingHorizontal: RFValue(20),
   },
 });
