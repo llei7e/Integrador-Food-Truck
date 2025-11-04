@@ -67,6 +67,40 @@ jobs:
           name: backend-coverage
           path: Backend/target/site/jacoco/
 
+# Novo Job: Apenas Testes Mobile (Expo)
+  test-mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./mobile
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/auto-atedimento/package-lock.json
+
+      - name: Install mobile dependencies
+        run: npm ci
+
+      - name: Run mobile linting (opcional)
+        run: npm run lint -- --max-warnings=5
+
+      - name: Run mobile tests
+        run: npm test -- --coverage --watchAll=false
+
+      - name: Upload mobile coverage report
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-coverage-report
+          path: mobile/auto-atedimento/coverage/
+          retention-days: 7
+
   build-frontend:
     needs: test-frontend
     runs-on: ubuntu-latest
