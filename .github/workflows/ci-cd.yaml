@@ -93,7 +93,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: web/build/
+          path: web/.next/
 
   build-backend:
     needs: test-backend
@@ -111,6 +111,7 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
           cache: 'maven'
+          cache-dependency-path: Backend/pom.xml
 
       - name: Build backend
         run: |
