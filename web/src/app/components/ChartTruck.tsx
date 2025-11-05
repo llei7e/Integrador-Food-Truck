@@ -4,6 +4,7 @@ import ApexCharts from "apexcharts";
 
 export default function ChartTruck() {
   useEffect(() => {
+    if (typeof document === 'undefined') return;
     const el = document.querySelector(".chart-card");
     const backgroundColor = el
       ? getComputedStyle(el).backgroundColor

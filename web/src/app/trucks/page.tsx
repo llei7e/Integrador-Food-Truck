@@ -1,9 +1,19 @@
+"use client";
 import Filter from "../components/filter";
 import Header from "../components/header";
-import MapView from "../components/map";
-import ChartTruck from "../components/ChartTruck";
 import Table from "../components/tableTruck";
 import Card from "../components/ui/card";
+import dynamic from "next/dynamic";
+
+const MapView = dynamic(() => import('@/components/map'), {
+  ssr: false,
+  loading: () => <p>Carregando mapa...</p>,
+})
+
+const ChartTruck = dynamic(() => import('@/components/ChartTruck'), {
+  ssr: false,
+  loading: () => <p>Carregando gráfico...</p>,
+});
 
 export default function Trucks() {
   return (
