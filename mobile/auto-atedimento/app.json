@@ -34,6 +34,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "79d01567-ca18-4d29-99b3-11d36b53b9f9"
+      }
+    },
+    "owner": "henferper"
   }
 }
