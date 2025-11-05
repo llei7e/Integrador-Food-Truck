@@ -16,19 +16,23 @@ export default function Trucks() {
           <Card 
             Title="Vendas do Dia" 
             iconColor="gray" 
-            iconImage="tdesign:money"/>
+            iconImage="tdesign:money"
+            API_VALUE=""/>
           <Card 
             Title="Média de Vendas" 
             iconColor="gray" 
-            iconImage="tdesign:money"/>
+            iconImage="tdesign:money"
+            API_VALUE=""/>
           <Card 
             Title="Pedidos" 
             iconColor="gray" 
-            iconImage="tdesign:money"/>
+            iconImage="tdesign:money"
+            API_VALUE=""/>
           <Card 
             Title="Ticket Médio" 
             iconColor="gray" 
-            iconImage="tdesign:money"/>
+            iconImage="tdesign:money"
+            API_VALUE=""/>
         </div>
         <TableSales/>
       </div>
