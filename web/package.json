@@ -15,6 +15,7 @@
     "@iconify/tailwind": "^1.2.0",
     "@iconify/utils": "^3.0.1",
     "apexcharts": "^3.46.0",
+    "axios": "^1.13.2",
     "chart.js": "^4.5.0",
     "leaflet": "^1.9.4",
     "leaflet-defaulticon-compatibility": "^0.1.2",
