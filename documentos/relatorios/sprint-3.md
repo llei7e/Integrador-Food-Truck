@@ -33,6 +33,7 @@ BACKEND
 ![alt text](images/sprint3/finished1.png)
 ![alt text](images/sprint3/finished2.png)
 ![alt text](images/sprint3/finished3.png)
+![alt text](images/sprint3/image.png)
 
 ## Resumo de rastreabilidade → Issues x PRs x entregas
 ![issues](images/sprint1/issues.png)
