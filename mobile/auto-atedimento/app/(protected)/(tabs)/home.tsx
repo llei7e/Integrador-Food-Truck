@@ -351,7 +351,8 @@ const styles = StyleSheet.create({
     fontSize: isMobile ? RFValue(10) : RFValue(14), // (Estilo da sua última versão)
     fontWeight: '400', // (Estilo da sua última versão)
     marginVertical: RFValue(2),
-    marginHorizontal: isMobile ? RFValue(0) : RFValue(5),
+    marginLeft: isMobile ? RFValue(0) : RFValue(5),
+    marginRight: isMobile ? RFValue(0) : RFValue(3),
     flexShrink: 1, 
   },
 

@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +23,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtUtils jwtUtils;
     private final UserRepository userRepo;
-    private final ObjectMapper mapper = new ObjectMapper(); // para escrever JSON
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     public void onAuthenticationSuccess(
@@ -34,15 +35,23 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
             String email = (String) oAuth2User.getAttributes().get("email");
 
-            // Carrega usuário local e gera SEU JWT (mesma lógica do login normal)
+            // pega o redirect que o frontend mandou na URL: ?redirect=http://localhost:8081/oauth-google
+            String frontendRedirect = request.getParameter("redirect");
+            if (frontendRedirect == null || frontendRedirect.isBlank()) {
+                // fallback: se não mandou nada, manda pra /oauth-google mesmo
+                frontendRedirect = "http://localhost:8081/oauth-google";
+            }
+
+            // carrega usuário e gera jwt
             User user = userRepo.findByEmail(email).orElseThrow();
             var userDetails = UserDetailsImpl.build(user);
             String jwt = jwtUtils.generateJwtToken(userDetails);
 
-            String role =
-                    user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_ADMIN)
-                            ? "admin" : "user";
+            String role = user.getRoles().stream()
+                    .anyMatch(r -> r.getName() == RoleName.ROLE_ADMIN)
+                    ? "admin" : "user";
 
+            // mesmo JSON que você tinha antes
             Map<String, Object> body = new HashMap<>();
             body.put("access_token", jwt);
             body.put("token_type", "bearer");
@@ -53,21 +62,23 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     "role", role
             ));
 
-            // Escreve JSON na resposta (sem redirecionar)
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-            response.setContentType("application/json");
-            mapper.writeValue(response.getWriter(), body);
+            String json = mapper.writeValueAsString(body);
+
+            // monta a URL final: <redirect do frontend>?payload=<json>
+            String redirectUrl = frontendRedirect
+                    + (frontendRedirect.contains("?") ? "&" : "?")
+                    + "payload=" + URLEncoder.encode(json, StandardCharsets.UTF_8);
+
+            response.sendRedirect(redirectUrl);
 
         } catch (Exception ex) {
-            // Se algo falhar, retorne 500 com um JSON simples
             try {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                 response.setContentType("application/json");
                 mapper.writeValue(response.getWriter(),
                         Map.of("error", "Falha ao concluir login com Google"));
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {}
         }
     }
 }
