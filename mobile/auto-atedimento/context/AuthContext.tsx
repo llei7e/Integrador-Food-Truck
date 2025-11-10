@@ -16,7 +16,7 @@ type AuthCtx = {
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  completeSocialLogin: (token: string, email?: string | null) => Promise<void>;
+  completeSocialLogin: (token: string, email?: string | null, name?: string | null) => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -25,13 +25,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
+  // restaura sessão ao abrir o app
+  useEffect(() => {
     (async () => {
       try {
-        // Limpa qualquer sessão anterior ao iniciar o app.
-        await clearAuth();
+        const saved = await getAuth();   // pode vir undefined/null
+        if (saved && saved.token && saved.user) {
+          setUser(saved.user);
+        } else {
+          await clearAuth();
+        }
       } finally {
-        // Finaliza o carregamento para a tela de login aparecer.
         setLoading(false);
       }
     })();
@@ -39,15 +43,6 @@ useEffect(() => {
 
   // ---------- EMAIL/SENHA ----------
   async function signIn(email: string, password: string) {
-    const body = new URLSearchParams({
-      grant_type: "password",
-      username: email,
-      password,
-      scope: "",
-      client_id: "",
-      client_secret: "",
-    });
-
     const res = await fetch(`${BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: { Accept: "application/json", "Content-Type": "application/json" },
@@ -67,11 +62,10 @@ useEffect(() => {
 
   async function signUp(name: string, email: string, password: string) {
     const res = await fetch(`${BASE_URL}/api/auth/register`, {
-        method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role: "user" }),
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password, role: "user" }),
     });
-
 
     let data: any = null; try { data = await res.json(); } catch {}
     if (!res.ok) throw new ApiError(data?.message || data?.detail || `Erro ${res.status}`, res.status, data);
@@ -85,17 +79,17 @@ useEffect(() => {
   }
 
   // ---------- GOOGLE ----------
-  // salva token vindo do callback e cria o usuário local
-  async function completeSocialLogin(token: string, email?: string | null) {
-    const u: User = { email: email ?? "email@desconhecido.com", name: "Usuário(a)" };
-    await saveAuth(token, u, null);
-    setUser(u);
+  // agora aceita name também
+  async function completeSocialLogin(token: string, email?: string | null, name?: string | null) {
+    const u: User = {
+      email: email ?? "email@desconhecido.com",
+      name: name ?? "Usuário(a)",
+    };
+    await saveAuth(token, u, null);  // salva no storage
+    setUser(u);                      // atualiza contexto
   }
 
   async function signInWithGoogle() {
-    // URL de retorno:
-    // - Web: usa a origem atual (porta correta, ex. 8081)
-    // - Nativo: usa um deep link do app (expo-router)
     const redirectUri =
       Platform.OS === "web"
         ? `${window.location.origin}/oauth-google`
@@ -104,12 +98,10 @@ useEffect(() => {
     const authUrl = `${BASE_URL}/auth/google/login?redirect=${encodeURIComponent(redirectUri)}`;
 
     if (Platform.OS === "web") {
-      // abre na mesma aba; o backend vai redirecionar de volta para /oauth-google
       window.location.href = authUrl;
       return;
     }
 
-    // Em nativo, abrimos a sessão e capturamos a URL de retorno
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
     if (result.type === "success" && result.url) {
@@ -118,16 +110,6 @@ useEffect(() => {
 
       let token = (qp.access_token || qp.token) as string | undefined;
       let email = (qp.email as string | undefined) ?? null;
-
-      // fallback: caso o backend devolva no hash #access_token
-      if (!token) {
-        try {
-          const url = new URL(result.url);
-          const h = new URLSearchParams(url.hash.replace(/^#/, ""));
-          token = token || (h.get("access_token") ?? h.get("token") ?? undefined);
-          email = email || h.get("email");
-        } catch {}
-      }
 
       if (!token) throw new Error("Token ausente no retorno do Google.");
       await completeSocialLogin(token, email);
