@@ -7,6 +7,7 @@ import OnEye from "../public/favicon/on_eye"
 import logo from "../public/logo.png"
 import Image from "next/image"
 import { useState } from "react";
+import GoogleButton from "@/components/googleButton";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -18,14 +19,16 @@ export default function Login() {
       </div>
       <div className="w-full md:w-2/5 bg-[#EFEAEA] flex items-center justify-center">
         <div className="flex flex-col justify-center w-[70%] max-w-md">
-          <div className="flex justify-center mb-15">
+          <div className="flex justify-center mb-5">
             <Image
             priority={false}
             src={logo} 
             alt={"logo"} 
-            width={200} 
-            height={200}/>
+            width={150} 
+            height={150}/>
           </div>
+
+          <GoogleButton/>
           
           <SelectButton
             colorButton1="bg-[#E7E5E5]"
