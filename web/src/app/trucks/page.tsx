@@ -4,6 +4,8 @@ import Header from "../components/header";
 import Table from "../components/tableTruck";
 import Card from "../components/ui/card";
 import dynamic from "next/dynamic";
+import axios from "axios";
+import { useState, useEffect } from "react";
 
 const MapView = dynamic(() => import('@/components/map'), {
   ssr: false,
@@ -15,7 +17,23 @@ const ChartTruck = dynamic(() => import('@/components/ChartTruck'), {
   loading: () => <p>Carregando gráfico...</p>,
 });
 
+const instance = axios.create({
+  baseURL: 'https://localhost:8080/api/truck',
+  timeout: 5000,
+  headers: {'X-Custom-Header': 'foobar'}
+});
+
 export default function Trucks() {
+  const [averageSales, setAverageSales] = useState("Carregando ...");
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [salesRes] = await Promise.all([
+        instance.get("")
+      ])
+    }
+  })
+
   return (
     <div className="mr-4 ml-4">
       <Header/>
@@ -42,15 +60,18 @@ export default function Trucks() {
             <Card 
               Title="Média de Vendas" 
               iconColor="gray" 
-              iconImage="tdesign:money"/>
+              iconImage="tdesign:money"
+              API_VALUE=""/>
             <Card 
               Title="Média de Pedidos" 
               iconColor="gray" 
-              iconImage="icon-park-outline:bill"/>
+              iconImage="icon-park-outline:bill"
+              API_VALUE=""/>
             <Card 
               Title="Trucks Cadastrados" 
               iconColor="gray" 
-              iconImage="streamline-plump:food-truck-event-fair"/>
+              iconImage="streamline-plump:food-truck-event-fair"
+              API_VALUE=""/>
           </div>
           <div className="ml-5 mt-4 flex">
             <Table/>
