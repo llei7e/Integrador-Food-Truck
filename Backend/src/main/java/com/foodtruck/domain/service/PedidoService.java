@@ -19,7 +19,7 @@ public class PedidoService {
   private final ProdutoRepository produtoRepo;
 
   @Transactional
-  public Pedido criar(Long usuarioId, Long foodtruckId, List<Item> itens) {
+  public Pedido criar(Long usuarioId, Long truckId, List<Item> itens) {
     if (itens == null || itens.isEmpty()) throw new IllegalArgumentException("Pedido sem itens");
 
     List<Long> idsProdutos = itens.stream().map(i -> i.produtoId).toList();
@@ -31,7 +31,7 @@ public class PedidoService {
 
     Pedido pedido = new Pedido();
     pedido.setUsuarioId(usuarioId);
-    pedido.setFoodtruckId(foodtruckId);
+    pedido.setTruckId(truckId);
     pedido.setStatus("RECEBIDO");
     pedido.setTotal(0);
 

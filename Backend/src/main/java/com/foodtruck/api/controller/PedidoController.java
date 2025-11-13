@@ -31,7 +31,7 @@ public class PedidoController {
 
   public record PedidoCreateDto(
       @NotNull Long usuarioId,
-      @NotNull Long foodtruckId,
+      @NotNull Long truckId,
       @NotEmpty List<@Valid ItemPedidoCreateDto> itens
   ) {}
 
@@ -40,7 +40,7 @@ public class PedidoController {
     var itens = dto.itens().stream()
         .map(i -> new PedidoService.Item(i.produtoId(), i.quantidade()))
         .toList();
-    Pedido p = pedidoService.criar(dto.usuarioId(), dto.foodtruckId(), itens);
+    Pedido p = pedidoService.criar(dto.usuarioId(), dto.truckId(), itens);
     return ResponseEntity.status(201).body(p);
   }
 

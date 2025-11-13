@@ -19,8 +19,8 @@ public class Pedido {
   @Column(name = "usuario_id", nullable = false)
   private Long usuarioId;
 
-  @Column(name = "foodtruck_id", nullable = false)
-  private Long foodtruckId;
+  @Column(name = "truck_id", nullable = false)
+  private Long truckId;
 
   @Column(nullable = false)
   private String status; // RECEBIDO/EM_PREPARO/...
