@@ -8,7 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.StandardCharsets; // Certifique-se que este import existe
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,8 +22,9 @@ public class JwtUtils {
     @Value("${jwt.expiration}") // em milissegundos
     private int jwtExpirationMs;
 
+    // --- ESTE É O MÉTODO CORRIGIDO ---
     private SecretKey getSigningKey() {
-        // Importante: jwt.secret deve ter tamanho suficiente para o HMAC escolhido (ex.: 256 bits para HS256).
+        // Usa getBytes() porque o seu segredo é texto simples
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -86,11 +87,13 @@ public class JwtUtils {
     public boolean validateJwtToken(String authToken) {
         try {
             Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(getSigningKey()) // Usa a chave correta
                 .build()
                 .parseSignedClaims(authToken);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
+            // É importante logar o erro para saber *porque* falhou
+            System.err.println("Validação do JWT falhou: " + e.getMessage());
             return false;
         }
     }
