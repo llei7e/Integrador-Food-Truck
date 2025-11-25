@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus; // <-- Adicione este import
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -12,6 +13,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint; // <-- Adicione este import
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -25,8 +27,6 @@ import java.util.Arrays;
 public class WebSecurityConfig {
 
     private final AuthTokenFilter authTokenFilter;
-
-    // ADICIONE estes dois: (já devem existir como @Service/@Component)
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
@@ -57,12 +57,19 @@ public class WebSecurityConfig {
             .cors(c -> c.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            
+            // --- FIX: IMPEDE O REDIRECIONAMENTO DE API ---
+            .exceptionHandling(e -> e
+                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+            )
+            // ---------------------------------------------
+
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/swagger","/swagger/**","/swagger-ui.html","/swagger-ui/**",
                                  "/v3/api-docs","/v3/api-docs/**","/v3/api-docs.yaml").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
 
-                // LIBERAR endpoints do fluxo OAuth2 (redirect do Spring)
+                // LIBERAR endpoints do fluxo OAuth2
                 .requestMatchers("/oauth2/**", "/login/**", "/login/oauth2/**").permitAll()
 
                 .requestMatchers("/h2-console/**", "/api/test/all").permitAll()
@@ -72,7 +79,7 @@ public class WebSecurityConfig {
             )
             .headers(h -> h.frameOptions(f -> f.disable()))
 
-            // HABILITAR O FLUXO OAUTH2 (redirecionamento p/ Google)
+            // HABILITAR O FLUXO OAUTH2
             .oauth2Login(o -> o
                 .userInfoEndpoint(u -> u.userService(customOAuth2UserService))
                 .successHandler(oAuth2SuccessHandler)
