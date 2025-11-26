@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus; // <-- Adicione este import
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -13,8 +13,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint; // <-- Adicione este import
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher; // <--- ADICIONE ESTE IMPORT
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -58,18 +59,21 @@ public class WebSecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             
-            // --- FIX: IMPEDE O REDIRECIONAMENTO DE API ---
+            // --- CORREÇÃO DEFINITIVA AQUI ---
             .exceptionHandling(e -> e
-                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                // Define que APENAS para rotas "/api/**", o erro será 401 (sem redirect)
+                .defaultAuthenticationEntryPointFor(
+                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                    new AntPathRequestMatcher("/api/**")
+                )
             )
-            // ---------------------------------------------
+            // --------------------------------
 
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/swagger","/swagger/**","/swagger-ui.html","/swagger-ui/**",
                                  "/v3/api-docs","/v3/api-docs/**","/v3/api-docs.yaml").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
 
-                // LIBERAR endpoints do fluxo OAuth2
                 .requestMatchers("/oauth2/**", "/login/**", "/login/oauth2/**").permitAll()
 
                 .requestMatchers("/h2-console/**", "/api/test/all").permitAll()
@@ -79,7 +83,6 @@ public class WebSecurityConfig {
             )
             .headers(h -> h.frameOptions(f -> f.disable()))
 
-            // HABILITAR O FLUXO OAUTH2
             .oauth2Login(o -> o
                 .userInfoEndpoint(u -> u.userService(customOAuth2UserService))
                 .successHandler(oAuth2SuccessHandler)

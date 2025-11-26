@@ -1,12 +1,12 @@
 package com.foodtruck.domain.service;
 
-import com.foodtruck.api.dto.PedidosDto; // --- 1. Importar o DTO correto ---
+import com.foodtruck.api.dto.PedidosDto;
 import com.foodtruck.domain.model.ItemPedido;
 import com.foodtruck.domain.model.Pedido;
 import com.foodtruck.domain.model.Produto;
 import com.foodtruck.domain.repo.PedidoRepository;
 import com.foodtruck.domain.repo.ProdutoRepository;
-import com.foodtruck.security.UserDetailsImpl; // --- 2. Importar UserDetails ---
+import com.foodtruck.security.UserDetailsImpl; 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,17 +22,15 @@ import java.util.stream.Collectors;
 public class PedidoService {
     private final PedidoRepository pedidoRepo;
     private final ProdutoRepository produtoRepo;
-    // O record 'Item' interno não é mais necessário
 
     @Transactional
-    // --- 3. Assinatura do método ATUALIZADA ---
     public Pedido criar(PedidosDto.CriarPedidoRequest dto, UserDetailsImpl principal) {
         
         if (dto.itens() == null || dto.itens().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pedido sem itens");
         }
 
-        // 1. Validar produtos (Lógica existente)
+        // 1. Validar produtos
         List<Long> idsProdutos = dto.itens().stream().map(i -> i.produtoId()).toList();
         Map<Long, Produto> mapaProdutos = produtoRepo.findAllById(idsProdutos)
                 .stream().collect(Collectors.toMap(Produto::getId, Function.identity()));
@@ -43,13 +41,13 @@ public class PedidoService {
 
         // 2. Criar e popular a entidade Pedido
         Pedido pedido = new Pedido();
-        pedido.setUsuarioId(principal.getId()); // Pega o ID do usuário logado
+        pedido.setUsuarioId(principal.getId());
         pedido.setTruckId(dto.truck_id());
-        pedido.setStatus(dto.status()); // "na fila"
+        pedido.setStatus(dto.status());
         pedido.setMetodoPagamento(dto.metodoPagamento());
 
-        // --- 4. LÓGICA DE CÁLCULO DE TOTAL ---
-        int totalCalculadoEmCentavos = 0; 
+        // --- 4. LÓGICA DE CÁLCULO DE TOTAL (MUDADO PARA DOUBLE) ---
+        double totalCalculado = 0.0; // Agora é double
         
         for (var itemDto : dto.itens()) {
             Produto prod = mapaProdutos.get(itemDto.produtoId());
@@ -58,17 +56,15 @@ public class PedidoService {
             itemPedido.setProduto(prod);
             itemPedido.setQuantidade(itemDto.quantidade());
             
-            // O 'precoUnitario' não é mais salvo, usamos o do Produto
+            // Assumindo que prod.getPreco() retorna o valor em centavos (Integer)
+            // Converte o preço do produto para R$ (Double) antes de somar
+            totalCalculado += (prod.getPreco() / 100.0) * itemDto.quantidade();
             
-            // Assumindo que prod.getPreco() retorna um Integer em centavos
-            // (Se prod.getPreco() for Double, use: (int) (prod.getPreco() * 100))
-            totalCalculadoEmCentavos += prod.getPreco() * itemDto.quantidade();
-            
-            pedido.adicionarItem(itemPedido); // Helper para definir pedido.setItens e item.setPedido
+            pedido.adicionarItem(itemPedido);
         }
         
-        // 5. Salva o total calculado no backend
-        pedido.setTotal(totalCalculadoEmCentavos);
+        // 5. Salva o total calculado (Double) no pedido
+        pedido.setTotal(totalCalculado); // <-- CORRIGIDO: setTotal agora recebe double/Double
 
         // 6. Salvar tudo
         return pedidoRepo.save(pedido);
@@ -89,6 +85,4 @@ public class PedidoService {
     public boolean existe(Long id) {
         return pedidoRepo.existsById(id);
     }
-    
-    // O record 'Item' interno foi removido
 }
