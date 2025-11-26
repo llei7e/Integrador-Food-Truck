@@ -31,7 +31,7 @@ public class Pedido {
     private String status; // na fila / cozinhando / finalizado
 
     @Column(nullable = false) 
-    private Integer total; // Em centavos
+    private Double total; // Em centavos
 
     @CreationTimestamp
     @Column(name = "data_criacao", updatable = false)

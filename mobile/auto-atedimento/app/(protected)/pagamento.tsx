@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, ActivityIndicator, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Stack } from 'expo-router';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { RFPercentage } from 'react-native-responsive-fontsize';
-import { useCart } from '../../context/CartContext';
-import { api } from '../../lib/api';
+import { useCart } from '../../context/CartContext'; 
+import { api } from '../../lib/api'; 
 
 export default function Pagamento() {
   const { cartItems, total: valorTotalCarrinho, clearCart } = useCart();
@@ -14,18 +14,38 @@ export default function Pagamento() {
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Garante que o estado de loading e modal seja resetado ao re-focar na tela
+  useFocusEffect(
+    useCallback(() => {
+      setIsSubmitting(false);
+      setShowModal(false);
+    }, [])
+  );
+
   const getMethodStyle = (method: string) => method === selectedMethod ? [styles.method, styles.selected] : styles.method;
   const getTextStyle = (method: string) => method === selectedMethod ? styles.methodTextWhite : styles.methodText;
 
+  // --- FUNÇÃO DE PAGAMENTO (AGORA ASSÍNCRONA) ---
   const handlePaymentSuccess = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting) return; 
+    
+    if (cartItems.length === 0) {
+        Alert.alert("Erro", "Seu carrinho está vazio.");
+        return;
+    }
+
     setIsSubmitting(true);
 
+    // --- 1. LÓGICA DE STATUS DINÂMICO ---
+    let statusInicial = "NA_FILA"; 
+    if (selectedMethod === 'Dinheiro') {
+        statusInicial = "AGUARDANDO_PAGAMENTO"; // Entra no modo de notificação para o chapeiro
+    }
+    // ----------------------------------------
+
     const pedidoDTO = {
-      // total: valorTotalCarrinho,
-      status: "na fila",
-      truck_id: 1,
-      foodtruck_id: 1,
+      status: statusInicial, // Status de acordo com o método de pagamento
+      truck_id: 1, 
       metodoPagamento: selectedMethod,
       itens: cartItems.map(item => ({
         produtoId: item.produto.id,
@@ -34,17 +54,21 @@ export default function Pagamento() {
     };
 
     try {
+      // 2. Enviar para o backend
       await api('/api/pedidos', {
         method: 'POST',
-        auth: true,
+        auth: true, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pedidoDTO)
       });
 
-      clearCart();
-      router.replace('/agradecimento');
+      // 3. Se deu certo: Limpar o carrinho e navegar
+      clearCart(); 
+      router.replace('/agradecimento'); 
+      // isSubmitting será liberado ao unmount
 
     } catch (error: any) {
+      // 4. Se deu errado: Mostrar erro e resetar loading/modal
       console.error("Falha ao criar pedido:", error);
       Alert.alert(
         "Erro no Pedido",
@@ -87,9 +111,9 @@ export default function Pagamento() {
       case 'Dinheiro':
         return (
           <>
-            <Text style={styles.modalTitle}>Aguarde o chapeiro...</Text>
+            <Text style={styles.modalTitle}>Dirija-se ao caixa/chapeiro para pagar</Text>
             <ActivityIndicator size={200} color="#201000ff" style={{ marginTop: 30 }} />
-            <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Toque na tela quando o pagamento for confirmado</Text>
+            <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Toque na tela para enviar o pedido</Text>
           </>
         );
       default:
@@ -108,7 +132,6 @@ export default function Pagamento() {
           <Text style={styles.headerTitle}>Pagamento</Text>
         </View>
 
-        {/* Métodos de Pagamento */}
         <View style={styles.paymentContainer}>
           <TouchableOpacity style={getMethodStyle('Pix')} onPress={() => setSelectedMethod('Pix')}>
             <Ionicons name="qr-code" size={90} color={selectedMethod === 'Pix' ? 'white' : '#A11613'} />
@@ -134,28 +157,23 @@ export default function Pagamento() {
         <View style={styles.footer}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
-            {/* --- 7. USAR O TOTAL REAL DO CONTEXTO --- */}
             <Text style={styles.totalValue}>R$ {valorTotalCarrinho.toFixed(2)}</Text>
           </View>
 
           <TouchableOpacity
             style={[styles.payButton, cartItems.length === 0 && styles.payButtonDisabled]}
             onPress={() => setShowModal(true)}
-            disabled={cartItems.length === 0} // Desabilita o botão se o carrinho estiver vazio
+            disabled={cartItems.length === 0} 
           >
             <Text style={styles.payText}>Gerar Pagamento</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Modal de pagamento */}
         <Modal visible={showModal} transparent animationType="fade">
-          {/* --- 8. ATUALIZADO PARA CHAMAR A FUNÇÃO DE PAGAMENTO --- */}
           <Pressable
             style={styles.modalBackground}
-            // Só permite fechar/clicar se NÃO estiver enviando
             onPress={isSubmitting ? undefined : handlePaymentSuccess}
           >
-            {/* Envolve o conteúdo para que o clique nele também funcione */}
             <Pressable style={styles.modalContent} onPress={isSubmitting ? undefined : handlePaymentSuccess}>
               {getModalContent()}
             </Pressable>
@@ -230,7 +248,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  payButtonDisabled: { // Estilo para o botão desabilitado
+  payButtonDisabled: { 
     backgroundColor: '#ccc',
   },
   payText: {
@@ -239,16 +257,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   paymentContainer: {
-    gap: RFPercentage(8),
-    marginHorizontal: '15%',
-    height: RFPercentage(50), // <-- Altura mantida
-    width: '70%',
+    gap: RFPercentage(3),
+    marginHorizontal: '10%',
+    height: 600,
+    width: '80%',
     borderRadius: 60,
     backgroundColor: 'white',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingTop: RFPercentage(6),
-    justifyContent: 'center', // <-- Correção do grid 2x2
+    paddingTop: 70,
+    justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
