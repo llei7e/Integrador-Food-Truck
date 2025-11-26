@@ -1,16 +1,22 @@
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useEffect } from 'react';
+// import { useCart } from '../../context/CartContext'; // <-- REMOVIDO
 
 export default function Agradecimento() {
 
+  // const { clearCart } = useCart(); // <-- REMOVIDO
+
   useEffect(() => {
+    // clearCart(); // <-- REMOVIDO (agora é feito no pagamento.tsx)
+
     const timer = setTimeout(() => {
-      router.replace('/home'); // redireciona para a Home
-    }, 3000); 
+      // Navega de volta para a tela inicial (aba 'home')
+      router.replace('/(protected)/(tabs)/home');
+    }, 3000);
 
     return () => clearTimeout(timer); // limpa o timer ao desmontar
-  }, []);
+  }, []); // <-- Array de dependências vazio
 
   return (
     <>

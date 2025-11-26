@@ -1,21 +1,71 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, ActivityIndicator, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router } from 'expo-router';
+import { router } from 'expo-router';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
+import { RFPercentage } from 'react-native-responsive-fontsize';
+import { useCart } from '../../context/CartContext';
+import { api } from '../../lib/api';
 
 export default function Pagamento() {
-  const { total } = useLocalSearchParams<{ total?: string }>();
-  const valor = Number(total ?? 0);
+  const { cartItems, total: valorTotalCarrinho, clearCart } = useCart();
 
   const [selectedMethod, setSelectedMethod] = useState<'Pix' | 'Cartão Crédito' | 'Cartão Débito' | 'Dinheiro'>('Pix');
   const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getMethodStyle = (method: string) => method === selectedMethod ? [styles.method, styles.selected] : styles.method;
   const getTextStyle = (method: string) => method === selectedMethod ? styles.methodTextWhite : styles.methodText;
 
-  // Conteúdo do modal dependendo do método
+  const handlePaymentSuccess = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    const pedidoDTO = {
+      // total: valorTotalCarrinho,
+      status: "na fila",
+      truck_id: 1,
+      foodtruck_id: 1,
+      metodoPagamento: selectedMethod,
+      itens: cartItems.map(item => ({
+        produtoId: item.produto.id,
+        quantidade: item.quantity,
+      }))
+    };
+
+    try {
+      await api('/api/pedidos', {
+        method: 'POST',
+        auth: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pedidoDTO)
+      });
+
+      clearCart();
+      router.replace('/agradecimento');
+
+    } catch (error: any) {
+      console.error("Falha ao criar pedido:", error);
+      Alert.alert(
+        "Erro no Pedido",
+        `Não foi possível registrar o pedido: ${error.message || 'Tente novamente.'}`
+      );
+      setIsSubmitting(false);
+      setShowModal(false);
+    }
+  };
+
   const getModalContent = () => {
+    if (isSubmitting) {
+      return (
+        <>
+          <Text style={styles.modalTitle}>Registrando seu pedido...</Text>
+          <ActivityIndicator size={200} color="#201000ff" style={{ marginTop: 30 }} />
+          <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Aguarde...</Text>
+        </>
+      );
+    }
+
     switch (selectedMethod) {
       case 'Pix':
         return (
@@ -47,12 +97,6 @@ export default function Pagamento() {
     }
   };
 
-  // Função chamada ao clicar no modal
-  const handleModalClick = () => {
-    setShowModal(false);
-    router.push('/agradecimento'); // Redireciona para a tela de agradecimento
-  };
-
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
@@ -67,22 +111,22 @@ export default function Pagamento() {
         {/* Métodos de Pagamento */}
         <View style={styles.paymentContainer}>
           <TouchableOpacity style={getMethodStyle('Pix')} onPress={() => setSelectedMethod('Pix')}>
-            <Ionicons name="qr-code" size={80} color={selectedMethod === 'Pix' ? 'white' : '#A11613'} />
+            <Ionicons name="qr-code" size={90} color={selectedMethod === 'Pix' ? 'white' : '#A11613'} />
             <Text style={getTextStyle('Pix')}>Pix</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={getMethodStyle('Cartão Crédito')} onPress={() => setSelectedMethod('Cartão Crédito')}>
-            <Ionicons name="card" size={80} color={selectedMethod === 'Cartão Crédito' ? 'white' : '#A11613'} />
+            <Ionicons name="card" size={90} color={selectedMethod === 'Cartão Crédito' ? 'white' : '#A11613'} />
             <Text style={getTextStyle('Cartão Crédito')}>Cartão Crédito</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={getMethodStyle('Cartão Débito')} onPress={() => setSelectedMethod('Cartão Débito')}>
-            <Ionicons name="card-outline" size={80} color={selectedMethod === 'Cartão Débito' ? 'white' : '#A11613'} />
+            <Ionicons name="card-outline" size={90} color={selectedMethod === 'Cartão Débito' ? 'white' : '#A11613'} />
             <Text style={getTextStyle('Cartão Débito')}>Cartão Débito</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={getMethodStyle('Dinheiro')} onPress={() => setSelectedMethod('Dinheiro')}>
-            <Ionicons name="cash-outline" size={80} color={selectedMethod === 'Dinheiro' ? 'white' : '#A11613'} />
+            <Ionicons name="cash-outline" size={90} color={selectedMethod === 'Dinheiro' ? 'white' : '#A11613'} />
             <Text style={getTextStyle('Dinheiro')}>Dinheiro</Text>
           </TouchableOpacity>
         </View>
@@ -90,20 +134,31 @@ export default function Pagamento() {
         <View style={styles.footer}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>${valor.toFixed(2)}</Text>
+            {/* --- 7. USAR O TOTAL REAL DO CONTEXTO --- */}
+            <Text style={styles.totalValue}>R$ {valorTotalCarrinho.toFixed(2)}</Text>
           </View>
 
-          <TouchableOpacity style={styles.payButton} onPress={() => setShowModal(true)}>
+          <TouchableOpacity
+            style={[styles.payButton, cartItems.length === 0 && styles.payButtonDisabled]}
+            onPress={() => setShowModal(true)}
+            disabled={cartItems.length === 0} // Desabilita o botão se o carrinho estiver vazio
+          >
             <Text style={styles.payText}>Gerar Pagamento</Text>
           </TouchableOpacity>
         </View>
 
         {/* Modal de pagamento */}
         <Modal visible={showModal} transparent animationType="fade">
-          <Pressable style={styles.modalBackground} onPress={handleModalClick}>
-            <View style={styles.modalContent}>
+          {/* --- 8. ATUALIZADO PARA CHAMAR A FUNÇÃO DE PAGAMENTO --- */}
+          <Pressable
+            style={styles.modalBackground}
+            // Só permite fechar/clicar se NÃO estiver enviando
+            onPress={isSubmitting ? undefined : handlePaymentSuccess}
+          >
+            {/* Envolve o conteúdo para que o clique nele também funcione */}
+            <Pressable style={styles.modalContent} onPress={isSubmitting ? undefined : handlePaymentSuccess}>
               {getModalContent()}
-            </View>
+            </Pressable>
           </Pressable>
         </Modal>
       </View>
@@ -123,7 +178,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height:"20%",
+    height: "20%",
   },
   headerTitle: {
     flex: 1,
@@ -152,6 +207,7 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 40,
     fontWeight: '600',
+    lineHeight: 1,
   },
   totalValue: {
     fontSize: 50,
@@ -174,22 +230,26 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  payButtonDisabled: { // Estilo para o botão desabilitado
+    backgroundColor: '#ccc',
+  },
   payText: {
     color: '#fff',
     fontSize: 30,
     fontWeight: 'bold',
   },
   paymentContainer: {
-    gap: 40,
-    marginHorizontal: '10%',
-    height: 600,
-    width: '80%',
+    gap: RFPercentage(8),
+    marginHorizontal: '15%',
+    height: RFPercentage(50), // <-- Altura mantida
+    width: '70%',
     borderRadius: 60,
     backgroundColor: 'white',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingTop: 70,
-    justifyContent: 'space-around',
+    paddingTop: RFPercentage(6),
+    justifyContent: 'center', // <-- Correção do grid 2x2
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: -1,
