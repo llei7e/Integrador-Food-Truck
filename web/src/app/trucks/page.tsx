@@ -25,6 +25,16 @@ interface Truck {
   pedidos?: number; // Número de pedidos para esse truck
 }
 
+interface Pedido {
+  id: number;
+  status: string;
+  total: number;
+  metodoPagamento: string;
+  dataCriacao: string;
+  truckId: number;
+  itens: any[]; // Ajuste conforme necessário
+}
+
 export default function Trucks() {
   const [valorVendas, setValorVendas] = useState("Carregando ...");
   const [numeroPedidos, setNumeroPedidos] = useState("Carregando ...");
@@ -32,7 +42,7 @@ export default function Trucks() {
 
   const [selectedTruck, setSelectedTruck] = useState(""); // ID como string
   const [trucksList, setTrucksList] = useState<Truck[]>([]);
-  const [pedidosList, setPedidosList] = useState<any[]>([]); // Lista de pedidos da API
+  const [pedidosList, setPedidosList] = useState<Pedido[]>([]); // Lista de pedidos da API
   const [loadingList, setLoadingList] = useState(true);
 
   const isTruckSelected = !!selectedTruck;
@@ -45,13 +55,13 @@ export default function Trucks() {
         const [trucksResponse, pedidosResponse] = await Promise.all([
           fetch("http://localhost:8080/api/trucks", {
             headers: {
-              Authorization: "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwicm9sZXMiOlsiUk9MRV9VU0VSIl0sImlhdCI6MTc2NDExNTg2OSwiZXhwIjoxNzY0MjAyMjY5fQ.BxKpWzWrr-lMiXqac6BPzqM2wJSgPA-8cWq0fB2j2xo",
+              Authorization: "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwicm9sZXMiOlsiUk9MRV9VU0VSIl0sImlhdCI6MTc2NDI4Nzc5MCwiZXhwIjoxNzY0Mzc0MTkwfQ.Megf1RIPE4pVbGBofYq8Ze5tIv5IPpQjwi0m86y6pzI",
             },
             cache: "no-store",
           }),
           fetch("http://localhost:8080/api/pedidos", {
             headers: {
-              Authorization: "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwicm9sZXMiOlsiUk9MRV9VU0VSIl0sImlhdCI6MTc2NDExNTg2OSwiZXhwIjoxNzY0MjAyMjY5fQ.BxKpWzWrr-lMiXqac6BPzqM2wJSgPA-8cWq0fB2j2xo",
+              Authorization: "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwicm9sZXMiOlsiUk9MRV9VU0VSIl0sImlhdCI6MTc2NDI4Nzc5MCwiZXhwIjoxNzY0Mzc0MTkwfQ.Megf1RIPE4pVbGBofYq8Ze5tIv5IPpQjwi0m86y6pzI",
             },
             cache: "no-store",
           }),
@@ -68,10 +78,10 @@ export default function Trucks() {
         console.log("Pedidos recebidos:", pedidosData);
 
         if (Array.isArray(trucksData) && trucksData.length > 0) {
-          // Mapeia trucks e calcula vendas/pedidos por truck baseado em pedidos
+          // Mapeia trucks e calcula vendas/pedidos por truck baseado em pedidos (somente status "concluido")
           const trucksWithMetrics = trucksData.map((truck: Truck) => {
-            const pedidosDoTruck = (Array.isArray(pedidosData) ? pedidosData : pedidosData.data || []).filter((pedido: any) => pedido.foodtruckId === truck.id);
-            const totalVendas = pedidosDoTruck.reduce((sum: number, pedido: any) => sum + (pedido.total || 0), 0);
+            const pedidosDoTruck = (Array.isArray(pedidosData) ? pedidosData : pedidosData.data || []).filter((pedido: Pedido) => pedido.truckId === truck.id && pedido.status === "concluido");
+            const totalVendas = pedidosDoTruck.reduce((sum: number, pedido: Pedido) => sum + pedido.total, 0);
             const numPedidos = pedidosDoTruck.length;
 
             return {
@@ -116,7 +126,7 @@ export default function Trucks() {
     }
 
     if (isTruckSelected) {
-      // Modo selecionado: valores específicos do truck
+      // Modo selecionado: valores específicos do truck (somente pedidos concluídos)
       const selectedTruckData = trucksList.find((truck) => truck.id.toString() === selectedTruck);
       if (!selectedTruckData) {
         setValorVendas("Nenhum dado disponível");
@@ -124,20 +134,21 @@ export default function Trucks() {
         setStatusTruck("Nenhum dado disponível");
         return;
       }
-      setValorVendas(`R$ ${selectedTruckData.vendas?.toLocaleString() || '0'}`);
+      setValorVendas(`R$ ${selectedTruckData.vendas?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`);
       setNumeroPedidos((selectedTruckData.pedidos || 0).toString());
       setStatusTruck(selectedTruckData.ativo ? "Ativo" : "Inativo");
     } else {
-      // Modo geral: cálculos agregados de todos os trucks
-      const totalVendas = trucksList.reduce((sum: number, truck: Truck) => sum + (truck.vendas || 0), 0);
-      const totalPedidos = trucksList.reduce((sum: number, truck: Truck) => sum + (truck.pedidos || 0), 0);
+      // Modo geral: soma total de todos os totals dos pedidos concluídos
+      const pedidosConcluidos = pedidosList.filter((pedido: Pedido) => pedido.status === "concluido");
+      const totalVendas = pedidosConcluidos.reduce((sum: number, pedido: Pedido) => sum + pedido.total, 0);
+      const totalPedidos = pedidosConcluidos.length;
       const numTrucks = trucksList.length;
 
-      setValorVendas(`R$ ${(totalVendas / numTrucks).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
-      setNumeroPedidos((totalPedidos / numTrucks).toFixed(0));
-      setStatusTruck(numTrucks.toString());
+      setValorVendas(`R$ ${totalVendas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`); // Soma todos os totals concluídos
+      setNumeroPedidos(totalPedidos.toString()); // Total de pedidos concluídos
+      setStatusTruck(numTrucks.toString()); // Número de trucks
     }
-  }, [selectedTruck, trucksList, isTruckSelected]);
+  }, [selectedTruck, trucksList, pedidosList, isTruckSelected]);
 
   // Opções para o filtro (mapeia dos trucks com métricas)
   const truckOptions = trucksList.map((truck) => ({
@@ -169,19 +180,19 @@ export default function Trucks() {
         <div>
           <div className="flex">
             <Card
-              Title={isTruckSelected ? "Valor de vendas" : "Média de vendas"}
+              Title={"Valor de vendas"}
               iconColor="gray"
               iconImage="tdesign:money"
               API_VALUE={valorVendas}
             />
             <Card
-              Title={isTruckSelected ? "Número de pedidos" : "Média de pedidos"}
+              Title={"Número de pedidos"}
               iconColor="gray"
               iconImage="icon-park-outline:bill"
               API_VALUE={numeroPedidos}
             />
             <Card
-              Title={isTruckSelected ? "Status do Truck" : "Trucks Cadastrados"}
+              Title={"Status do Truck"}
               iconColor="gray"
               iconImage="streamline-plump:food-truck-event-fair"
               API_VALUE={statusTruck}
