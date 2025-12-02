@@ -85,4 +85,14 @@ public class PedidoService {
     public boolean existe(Long id) {
         return pedidoRepo.existsById(id);
     }
+
+    @Transactional
+    public Pedido atualizarStatus(Long id, String novoStatus) {
+        Pedido pedido = pedidoRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido não encontrado"));
+
+        pedido.setStatus(novoStatus);
+        return pedidoRepo.save(pedido);
+    }
+
 }
