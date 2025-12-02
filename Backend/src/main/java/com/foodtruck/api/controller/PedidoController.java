@@ -53,4 +53,15 @@ public class PedidoController {
         pedidoService.deletar(id);
         return ResponseEntity.noContent().build(); // 204
     }
+
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<PedidosDto.PedidoView> atualizarStatus(
+        @PathVariable Long id,
+        @RequestBody PedidosDto.AtualizarStatusRequest dto
+    ) {
+        Pedido pedidoAtualizado = pedidoService.atualizarStatus(id, dto.status());
+        return ResponseEntity.ok(pedidoMapper.toPedidoView(pedidoAtualizado));
+    }
+
 }
