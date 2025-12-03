@@ -58,7 +58,8 @@ public class PedidoService {
             
             // Assumindo que prod.getPreco() retorna o valor em centavos (Integer)
             // Converte o preço do produto para R$ (Double) antes de somar
-            totalCalculado += (prod.getPreco() / 100.0) * itemDto.quantidade();
+            totalCalculado += prod.getPreco() * itemDto.quantidade();
+
             
             pedido.adicionarItem(itemPedido);
         }

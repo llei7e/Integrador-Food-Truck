@@ -15,7 +15,7 @@ public class ProdutoService {
   private final ProdutoRepository produtoRepo;
   private final CategoriaRepository categoriaRepo;
 
-  public Produto criar(String nome, String descricao, Integer preco, @NotNull Long categoriaId, Boolean ativo) {
+  public Produto criar(String nome, String descricao, Double preco, @NotNull Long categoriaId, Boolean ativo) {
     Categoria categoria = categoriaRepo.findById(categoriaId)
         .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada"));
     Produto p = new Produto();

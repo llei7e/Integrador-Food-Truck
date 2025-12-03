@@ -26,7 +26,7 @@ public class ProdutoController {
   public record ProdutoCreateDto(
       @NotBlank String nome,
       String descricao,
-      @NotNull @Positive Integer preco,  // em centavos
+      @NotNull @Positive Double preco,  // em centavos
       @NotNull Long categoriaId,
       Boolean ativo
   ) {}
