@@ -10,9 +10,6 @@ import java.util.stream.Collectors;
 @Component
 public class PedidoMapper {
 
-    /**
-     * Converte uma Entidade Pedido para um DTO PedidoView
-     */
     public PedidosDto.PedidoView toPedidoView(Pedido pedido) {
         if (pedido == null) return null;
 
@@ -23,33 +20,30 @@ public class PedidoMapper {
         return new PedidosDto.PedidoView(
                 pedido.getId(),
                 pedido.getStatus(),
-                pedido.getTotal() / 100.0, // Converte centavos (Integer) de volta para Double
+                pedido.getTotal(),              // 👈 NÃO divide por 100
                 pedido.getMetodoPagamento(),
                 pedido.getDataCriacao(),
-                pedido.getTruckId(), 
+                pedido.getTruckId(),
                 itensView
         );
     }
 
-    /**
-     * Converte uma Entidade ItemPedido para um DTO ItemPedidoView
-     */
     public PedidosDto.ItemPedidoView toItemPedidoView(ItemPedido item) {
         if (item == null) return null;
 
-        // --- ALTERAÇÃO AQUI ---
-        // Pega o preço da Entidade Produto (assumindo Integer em centavos)
-        Integer precoUnitarioCentavos = item.getProduto().getPreco(); 
-        Integer quantidade = item.getQuantidade();
-        Integer totalItemCentavos = precoUnitarioCentavos * quantidade;
-        
+        var precoUnitario = item.getProduto().getPreco(); 
+        var quantidade = item.getQuantidade();
+
+        // Se preço já está tratado no Produto (ex: 10.10), não mexer:
+        var totalItem = precoUnitario * quantidade;
+
         return new PedidosDto.ItemPedidoView(
                 item.getId(),
                 item.getProduto().getId(),
-                item.getProduto().getNome(), // Pega o nome do produto
+                item.getProduto().getNome(),
                 quantidade,
-                precoUnitarioCentavos / 100.0, // Converte para Double (ex: 20.0)
-                totalItemCentavos / 100.0 // Converte para Double (ex: 40.0)
+                precoUnitario,      // 👈 sem dividir
+                totalItem           // 👈 sem dividir
         );
     }
 }
