@@ -39,7 +39,7 @@ public class ProdutoController {
 
   @GetMapping
   public List<Produto> listar() {
-    return produtoService.listarAtivos();
+    return produtoService.listarTodos();
   }
 
   @DeleteMapping("/{id}")
@@ -48,4 +48,19 @@ public class ProdutoController {
     produtoService.deletar(id);
     return ResponseEntity.noContent().build();
   }
+
+  public record AtualizarAtivoDto(
+        @NotNull Integer ativo // 0 ou 1
+  ) {}
+
+
+  @PatchMapping("/{id}/ativo")
+  public ResponseEntity<Produto> atualizarAtivo(
+        @PathVariable Long id,
+        @RequestBody @Validated AtualizarAtivoDto dto
+) {
+    Produto produtoAtualizado = produtoService.atualizarAtivo(id, dto.ativo());
+    return ResponseEntity.ok(produtoAtualizado);
+}
+
 }
