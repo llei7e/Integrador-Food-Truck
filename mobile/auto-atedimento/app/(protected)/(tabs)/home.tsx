@@ -1,5 +1,4 @@
-// app/(protected)/(tabs)/home.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   StyleSheet, 
   Image, 
@@ -15,50 +14,78 @@ import { useRouter } from 'expo-router';
 import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
 import { useAuth } from '../../../context/AuthContext';
 import { api, ApiError } from '../../../lib/api'; 
-import { useCart } from '../../../context/CartContext'; // --- NOVO ---
+import { useCart } from '../../../context/CartContext';
 
-// --- Interface para o produto vindo da API ---
+// Interface Produto
 interface Produto {
   id: number;
   nome: string;
   descricao: string;
   preco: number;
   ativo: boolean;
-  categoriaId: number; 
+  categoriaId: number; // Importante!
 }
 
-// --- Imagens por Categoria ---
+// Interface Categoria (para nosso uso local)
+interface Categoria {
+    id: number;
+    nome: string;
+    imagem: ImageSourcePropType;
+}
+
+// Helpers de Imagem
 const lancheImage = require('../../../assets/images/lanche1.jpg');
-const comboImage = require('../../../assets/images/combos.jpg');
+const comboImage = require('../../../assets/images/fritas.jpg');
 const bebidaImage = require('../../../assets/images/bebida1.jpg');
 
-// --- Função Helper para formatar preço ---
+// Imagens dos ícones das categorias
+const iconLanche = require('../../../assets/images/lanche.png');
+const iconCombo = require('../../../assets/images/fritas.png');
+const iconBebida = require('../../../assets/images/bebidas.png');
+
 const formatPrice = (price: number): string => {
   return `R$ ${price.toFixed(2).replace('.', ',')}`;
 };
 
-// --- Função Helper para selecionar a imagem ---
 const getImageForItem = (categoriaId: number): ImageSourcePropType => {
   switch (categoriaId) {
-    case 1:
-      return lancheImage;
-    case 2:
-      return comboImage;
-    case 3:
-      return bebidaImage;
-    default:
-      return lancheImage; // Padrão
+    case 1: return lancheImage;
+    case 2: return comboImage;
+    case 3: return bebidaImage;
+    default: return lancheImage;
   }
 };
 
+// Helper para pegar o ícone da categoria
+const getIconForCategory = (categoriaId: number): ImageSourcePropType => {
+    switch (categoriaId) {
+      case 1: return iconLanche;
+      case 2: return iconCombo;
+      case 3: return iconBebida;
+      default: return iconLanche;
+    }
+};
+
+// Helper para mapear ID -> Nome (caso o backend não mande o objeto categoria completo)
+const getCategoryName = (id: number) => {
+    switch(id) {
+        case 1: return "Lanches";
+        case 2: return "Acompanhamentos"; // ou Combos, ajuste conforme seu banco
+        case 3: return "Bebidas";
+        default: return "Outros";
+    }
+}
+
 
 export default function TabOneScreen() {
-  const [categoria, setCategoria] = useState<'lanches' | 'combos' | 'bebidas'>('lanches');
+  // Estado para armazenar o ID da categoria selecionada (começa com 1 = Lanches)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number>(1);
   
-  // --- Estados para dados da API ---
   const [allProdutos, setAllProdutos] = useState<Produto[]>([]); 
-  const [displayedItems, setDisplayedItems] = useState<Produto[]>([]); 
+  // Estado para as categorias disponíveis (extraídas dos produtos)
+  const [categoriasDisponiveis, setCategoriasDisponiveis] = useState<Categoria[]>([]);
   
+  const [displayedItems, setDisplayedItems] = useState<Produto[]>([]); 
   const [loading, setLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
 
@@ -66,21 +93,30 @@ export default function TabOneScreen() {
   const { signOut } = useAuth();
   const { addToCart, clearCart } = useCart();
 
-  // --- Hook para BUSCAR dados da API (roda UMA VEZ) ---
+  // 1. Busca Produtos e Extrai Categorias
   useEffect(() => {
     const fetchAllItems = async () => {
       setLoading(true);
       setError(null);
       try {
         const data: Produto[] = await api('/api/produtos', { auth: true });
-        setAllProdutos(data.filter(p => p.ativo)); 
+        const produtosAtivos = data.filter(p => p.ativo);
+        setAllProdutos(produtosAtivos);
+
+        // Extrai categorias únicas dos produtos
+        const catIds = Array.from(new Set(produtosAtivos.map(p => p.categoriaId))).sort();
+        
+        // Monta o objeto de categorias para exibir os botões
+        const cats: Categoria[] = catIds.map(id => ({
+            id: id,
+            nome: getCategoryName(id),
+            imagem: getIconForCategory(id)
+        }));
+        setCategoriasDisponiveis(cats);
+
       } catch (e: any) {
         console.error(e);
-        if (e instanceof ApiError) {
-          setError(`Erro ${e.status}: ${e.message}`);
-        } else {
-          setError('Não foi possível carregar os produtos.');
-        }
+        setError('Não foi possível carregar os produtos.');
       } finally {
         setLoading(false);
       }
@@ -90,31 +126,21 @@ export default function TabOneScreen() {
   }, []); 
 
   const handleSignOut = () => {
-    clearCart(); // Limpa o carrinho
-    signOut();   // Faz o logout
+    clearCart();
+    signOut();
   };
 
-  // --- Hook para FILTRAR os produtos (roda quando a categoria ou os produtos mudam) ---
+  // 2. Filtra produtos quando a categoria selecionada muda
   useEffect(() => {
-    let categoryIdToFilter: number;
-    
-    if (categoria === 'lanches') {
-      categoryIdToFilter = 1;
-    } else if (categoria === 'combos') {
-      categoryIdToFilter = 2;
-    } else { // 'bebidas'
-      categoryIdToFilter = 3;
+    if (allProdutos.length > 0) {
+        const filtered = allProdutos.filter(
+            produto => produto.categoriaId === selectedCategoryId
+        );
+        setDisplayedItems(filtered);
     }
+  }, [selectedCategoryId, allProdutos]); 
 
-    const filtered = allProdutos.filter(
-      produto => produto.categoriaId === categoryIdToFilter 
-    );
-    
-    setDisplayedItems(filtered);
 
-  }, [categoria, allProdutos]); 
-
-  // --- Função para renderizar o conteúdo (Loading, Erro, Lista ou Vazio) ---
   const renderContent = () => {
     if (loading) {
       return <ActivityIndicator size="large" color="#A11613" style={styles.centered} />;
@@ -128,7 +154,6 @@ export default function TabOneScreen() {
       return <Text style={styles.emptyText}>Nenhum item encontrado para esta categoria.</Text>;
     }
 
-    // Renderiza a lista de itens filtrados
     return (
       <View style={styles.itemsContainer}>
         {displayedItems.map(item => (
@@ -137,31 +162,25 @@ export default function TabOneScreen() {
             style={styles.menuItem1}
             onPress={() => router.push({
               pathname: "/detalhesProduto", 
-              // --- ALTERADO: Envia o objeto 'item' inteiro como string JSON ---
-              params: { 
-                item: JSON.stringify(item)
-              },
+              params: { item: JSON.stringify(item) },
             })}
           >
             <View style={styles.menuItem}>
-              
               <Image 
                 source={getImageForItem(item.categoriaId)} 
                 style={styles.menuItemImage} 
               />
-              
               <View style={styles.cardTextContainer}>
                 <View style={styles.cardLeft}>
                   <Text style={styles.menuItemName}>{item.nome}</Text>
                   <Text style={styles.menuItemPrice}>{formatPrice(item.preco)}</Text>
                 </View>
                 <View style={styles.cardRight} >
-                  {/* --- ALTERADO: Adiciona ao carrinho --- */}
                   <TouchableOpacity 
                     style={styles.addProduct}
                     onPress={(e) => {
-                      e.stopPropagation(); // Impede o clique de ir para a tela de detalhes
-                      addToCart(item, 1);  // Adiciona 1 item ao carrinho
+                      e.stopPropagation(); 
+                      addToCart(item, 1);  
                     }}
                   >
                       <Text style={styles.addButtonText}>Carrinho</Text>
@@ -181,45 +200,34 @@ export default function TabOneScreen() {
         <Image source={require('../../../assets/images/Logo.png')} style={styles.logo} />
         <TouchableOpacity 
           onPress={handleSignOut} 
-          style={{ 
-            backgroundColor: '#A11613', 
-            padding: 15, 
-            paddingHorizontal: 20, 
-            alignItems: 'center', 
-            position: 'absolute', 
-            top: 20, 
-            right: 20,
-            borderRadius: 10,
-          }}
+          style={styles.logoutButton}
         >
           <Text style={{ color: 'white', fontWeight: 'bold' }}>SAIR</Text>
         </TouchableOpacity>
       </View>
       
+      {/* --- CATEGORIAS DINÂMICAS --- */}
       <View style={styles.categoryButtons}>
-        <TouchableOpacity 
-          style={[styles.categoryButton, categoria === 'lanches' && { backgroundColor: '#F39D0A' }]} 
-          onPress={() => setCategoria('lanches')}
-        >
-          <Image source={require('../../../assets/images/lanche.png')} style={styles.img} />
-          <Text style={styles.categoryText}>Lanches</Text>
-        </TouchableOpacity>
+        {categoriasDisponiveis.map((cat, index) => {
+            // Define estilo baseado se é o do meio (index 1) ou pontas, ou simplifica para todos iguais
+            // Aqui vou usar uma lógica simples: se for selecionado, muda cor
+            const isSelected = selectedCategoryId === cat.id;
+            
+            // Ajuste de estilo para o botão do meio ser maior (opcional, igual ao seu layout original)
+            const isMiddle = index === 1; 
+            const buttonStyle = isMiddle ? styles.categoryButtonMiddle : styles.categoryButton;
 
-        <TouchableOpacity 
-          style={[styles.categoryButtonMiddle, categoria === 'combos' && { backgroundColor: '#F39D0A' }]} 
-          onPress={() => setCategoria('combos')}
-        >
-          <Image source={require('../../../assets/images/combo.png')} style={styles.img}/>
-          <Text style={styles.categoryText}>Combos</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.categoryButton, categoria === 'bebidas' && { backgroundColor: '#F39D0A' }]} 
-          onPress={() => setCategoria('bebidas')}
-        >
-          <Image source={require('../../../assets/images/bebidas.png')} style={styles.img} />
-          <Text style={styles.categoryText}>Bebidas</Text>
-        </TouchableOpacity>
+            return (
+                <TouchableOpacity 
+                    key={cat.id}
+                    style={[buttonStyle, isSelected && { backgroundColor: '#F39D0A' }]} 
+                    onPress={() => setSelectedCategoryId(cat.id)}
+                >
+                    <Image source={cat.imagem} style={styles.img} />
+                    <Text style={styles.categoryText}>{cat.nome}</Text>
+                </TouchableOpacity>
+            );
+        })}
       </View>
 
       <ScrollView contentContainerStyle={styles.menuContainer}>
@@ -260,7 +268,7 @@ const styles = StyleSheet.create({
   },
   categoryButton: {
     backgroundColor: '#A11613',
-    width: width * 0.30,
+    width: width * 0.27,
     height: RFValue(45),
     borderBottomLeftRadius: RFValue(20),
     borderBottomRightRadius: RFValue(20),
@@ -275,7 +283,7 @@ const styles = StyleSheet.create({
   },
   categoryButtonMiddle: {
     backgroundColor: '#A11613',
-    width: width * 0.30,
+    width: width * 0.40,
     height: RFValue(55),
     paddingHorizontal: RFValue(10),
     borderBottomLeftRadius: RFValue(20),
@@ -342,7 +350,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuItemName: {
-    fontSize: isMobile ? RFValue(10) : RFValue(14),
+    fontSize: isMobile ? RFValue(10) : RFValue(12),
     fontWeight: '400',
     marginVertical: RFValue(2),
     marginLeft: isMobile ? RFValue(0) : RFValue(5),
@@ -397,4 +405,5 @@ const styles = StyleSheet.create({
     marginTop: RFValue(50),
     paddingHorizontal: RFValue(20),
   },
+  logoutButton:{}
 });
