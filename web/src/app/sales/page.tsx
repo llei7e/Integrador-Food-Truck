@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getPedidos } from "../services/pedidosService";
+import { getPedidos } from "../services/pedidos";
 
 import Filter from "../components/filter";
 import Header from "../components/header";
