@@ -5,6 +5,8 @@ import Table from "../components/tableTruck";
 import Card from "../components/ui/card";
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
+import { getTrucks, Truck } from "@/services/trucks";
+import { getPedidos, Pedido } from "@/services/pedidos";
 
 const MapView = dynamic(() => import('@/components/map'), {
   ssr: false,
@@ -16,71 +18,32 @@ const ChartTruck = dynamic(() => import('@/components/ChartTruck'), {
   loading: () => <p>Carregando gráfico...</p>,
 });
 
-// Interface para Truck (com campos opcionais para vendas/pedidos calculados)
-interface Truck {
-  id: number;
-  localizacao: string;
-  ativo: boolean;
-  vendas?: number; // Calculado da API de pedidos
-  pedidos?: number; // Número de pedidos para esse truck
-}
-
-interface Pedido {
-  id: number;
-  status: string;
-  total: number;
-  metodoPagamento: string;
-  dataCriacao: string;
-  truckId: number;
-  itens: any[]; // Ajuste conforme necessário
-}
-
 export default function Trucks() {
   const [valorVendas, setValorVendas] = useState("Carregando ...");
   const [numeroPedidos, setNumeroPedidos] = useState("Carregando ...");
   const [statusTruck, setStatusTruck] = useState("Carregando ...");
 
-  const [selectedTruck, setSelectedTruck] = useState(""); // ID como string
+  const [selectedTruck, setSelectedTruck] = useState("");
   const [trucksList, setTrucksList] = useState<Truck[]>([]);
-  const [pedidosList, setPedidosList] = useState<Pedido[]>([]); // Lista de pedidos da API
+  const [pedidosList, setPedidosList] = useState<Pedido[]>([]);
   const [loadingList, setLoadingList] = useState(true);
 
   const isTruckSelected = !!selectedTruck;
 
-  // Fetch paralelo: Trucks + Pedidos (usa dados de pedidos para calcular vendas/pedidos)
   useEffect(() => {
     const fetchData = async () => {
       try {
         console.log("Iniciando fetch de trucks e pedidos...");
-        const [trucksResponse, pedidosResponse] = await Promise.all([
-          fetch("http://localhost:8080/api/trucks", {
-            headers: {
-              Authorization: "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwicm9sZXMiOlsiUk9MRV9VU0VSIl0sImlhdCI6MTc2NDI4Nzc5MCwiZXhwIjoxNzY0Mzc0MTkwfQ.Megf1RIPE4pVbGBofYq8Ze5tIv5IPpQjwi0m86y6pzI",
-            },
-            cache: "no-store",
-          }),
-          fetch("http://localhost:8080/api/pedidos", {
-            headers: {
-              Authorization: "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwicm9sZXMiOlsiUk9MRV9VU0VSIl0sImlhdCI6MTc2NDI4Nzc5MCwiZXhwIjoxNzY0Mzc0MTkwfQ.Megf1RIPE4pVbGBofYq8Ze5tIv5IPpQjwi0m86y6pzI",
-            },
-            cache: "no-store",
-          }),
+        const [trucksData, pedidosData] = await Promise.all([
+          getTrucks(),
+          getPedidos(),
         ]);
-
-        if (!trucksResponse.ok || !pedidosResponse.ok) {
-          throw new Error(`Erro HTTP: ${trucksResponse.status} ou ${pedidosResponse.status}`);
-        }
-
-        const trucksData = await trucksResponse.json();
-        const pedidosData = await pedidosResponse.json();
-
         console.log("Trucks recebidos:", trucksData);
         console.log("Pedidos recebidos:", pedidosData);
 
         if (Array.isArray(trucksData) && trucksData.length > 0) {
-          // Mapeia trucks e calcula vendas/pedidos por truck baseado em pedidos (somente status "concluido")
           const trucksWithMetrics = trucksData.map((truck: Truck) => {
-            const pedidosDoTruck = (Array.isArray(pedidosData) ? pedidosData : pedidosData.data || []).filter((pedido: Pedido) => pedido.truckId === truck.id && pedido.status === "concluido");
+            const pedidosDoTruck = pedidosData.filter((pedido: Pedido) => pedido.truckId === truck.id && pedido.status === "concluido");
             const totalVendas = pedidosDoTruck.reduce((sum: number, pedido: Pedido) => sum + pedido.total, 0);
             const numPedidos = pedidosDoTruck.length;
 
@@ -92,7 +55,7 @@ export default function Trucks() {
           });
 
           setTrucksList(trucksWithMetrics);
-          setPedidosList(Array.isArray(pedidosData) ? pedidosData : pedidosData.data || []);
+          setPedidosList(pedidosData);
         } else {
           setTrucksList([]);
           setPedidosList([]);
@@ -102,7 +65,7 @@ export default function Trucks() {
         }
       } catch (error: any) {
         console.error("Erro ao carregar dados:", error);
-        if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+        if (error.message.includes("401") || error.message.includes("Sessão expirada")) {
           console.error("Token inválido – redirecione para login");
           // Opcional: use next/router para push('/login');
         }
@@ -126,7 +89,6 @@ export default function Trucks() {
     }
 
     if (isTruckSelected) {
-      // Modo selecionado: valores específicos do truck (somente pedidos concluídos)
       const selectedTruckData = trucksList.find((truck) => truck.id.toString() === selectedTruck);
       if (!selectedTruckData) {
         setValorVendas("Nenhum dado disponível");
@@ -138,19 +100,17 @@ export default function Trucks() {
       setNumeroPedidos((selectedTruckData.pedidos || 0).toString());
       setStatusTruck(selectedTruckData.ativo ? "Ativo" : "Inativo");
     } else {
-      // Modo geral: soma total de todos os totals dos pedidos concluídos
       const pedidosConcluidos = pedidosList.filter((pedido: Pedido) => pedido.status === "concluido");
       const totalVendas = pedidosConcluidos.reduce((sum: number, pedido: Pedido) => sum + pedido.total, 0);
       const totalPedidos = pedidosConcluidos.length;
       const numTrucks = trucksList.length;
 
-      setValorVendas(`R$ ${totalVendas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`); // Soma todos os totals concluídos
-      setNumeroPedidos(totalPedidos.toString()); // Total de pedidos concluídos
-      setStatusTruck(numTrucks.toString()); // Número de trucks
+      setValorVendas(`R$ ${totalVendas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+      setNumeroPedidos(totalPedidos.toString());
+      setStatusTruck(numTrucks.toString());
     }
   }, [selectedTruck, trucksList, pedidosList, isTruckSelected]);
 
-  // Opções para o filtro (mapeia dos trucks com métricas)
   const truckOptions = trucksList.map((truck) => ({
     value: truck.id.toString(),
     label: `Truck ${truck.id} - ${truck.localizacao}`,
