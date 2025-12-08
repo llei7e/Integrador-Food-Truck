@@ -4,12 +4,10 @@ package com.foodtruck.domain.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.Instant;
 
 @Entity
-@Table(name = "usuario")
+@Table(name = "users")
 @Getter @Setter
 public class Usuario {
 
@@ -18,12 +16,9 @@ public class Usuario {
   private Long id;
 
   @Column(nullable = false, length = 120)
-  private String nome;
+  private String name;
 
   @Column(nullable = false, length = 40)
-  private String tipo; // ex.: "cliente", "dono", "admin" — fica a seu critério
+  private String cargo; // ex.: "cliente", "dono", "admin" — fica a seu critério
 
-  @CreationTimestamp
-  @Column(name = "data_criacao", updatable = false)
-  private Instant dataCriacao;
 }
