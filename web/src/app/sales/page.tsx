@@ -12,34 +12,34 @@ export default function Trucks() {
   const [vendasDoDia, setVendasDoDia] = useState(0);
   const [totalPedidos, setTotalPedidos] = useState(0);
   const [ticketMedio, setTicketMedio] = useState(0);
+  const [pedidosList, setPedidosList] = useState<any[]>([])
 
   useEffect(() => {
     async function load() {
-      const pedidos = await getPedidos();
+      try {
+        const pedidos = await getPedidos();
+        setPedidosList(pedidos);
 
-      // --------- VENDAS DO DIA (dia de hoje) ----------
-      const hoje = new Date().toISOString().split("T")[0];
+        const hoje = new Date().toISOString().split("T")[0];
 
-      const pedidosDoDia = pedidos.filter((p: any) =>
-        p.dataCriacao.startsWith(hoje)
-      );
+        const pedidosDoDia = pedidos.filter((p: any) =>
+          p.dataCriacao.startsWith(hoje)
+        );
 
-      setVendasDoDia(pedidosDoDia.length);
+        setVendasDoDia(pedidosDoDia.length);
 
-      // --------- TOTAL DE PEDIDOS (todos) ----------
-      setTotalPedidos(pedidos.length);
+        setTotalPedidos(pedidos.length);
 
-      // --------- TICKET MÉDIO ----------
-      // soma de todos os valores do campo "total" do backend
-      const somaTotal = pedidos.reduce((acc: number, p: any) => acc + p.total, 0);
+        const somaTotal = pedidos.reduce((acc: number, p: any) => acc + p.total, 0);
 
-      const ticket =
-        pedidos.length > 0 ? somaTotal / pedidos.length : 0;
+        const ticket =
+          pedidos.length > 0 ? somaTotal / pedidos.length : 0;
 
-      // arredonda pra 2 casas decimais
-      setTicketMedio(Number(ticket.toFixed(2)));
+        setTicketMedio(Number(ticket.toFixed(2)));
 
-      
+      } catch (error) {
+        console.error("Erro ao carregar pedidos:", error);
+      }
     }
 
     load();
@@ -77,7 +77,7 @@ export default function Trucks() {
           />
         </div>
 
-        <TableSales />
+        <TableSales pedidosList={pedidosList} /> {/*  */}
       </div>
     </div>
   );
