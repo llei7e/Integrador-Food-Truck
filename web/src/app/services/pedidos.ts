@@ -11,7 +11,7 @@ export interface Pedido {
 export async function getPedidos() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   if (!token) {
-    throw new Error("Token de autenticação não encontrado. Faça login primeiro.");
+    throw new Error("NO_TOKEN");
   }
 
   const response = await fetch("http://localhost:8080/api/pedidos", {
@@ -26,7 +26,7 @@ export async function getPedidos() {
   if (!response.ok) {
     if (response.status === 401) {
       localStorage.removeItem('token');
-      throw new Error("Sessão expirada. Faça login novamente.");
+      throw new Error("TOKEN_INVALID");
     }
     throw new Error(`Erro ao buscar pedidos: ${response.status}`);
   }
