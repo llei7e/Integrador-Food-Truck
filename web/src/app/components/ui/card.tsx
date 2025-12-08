@@ -4,7 +4,7 @@ interface cardProps {
     iconImage:string;
     iconColor:string;
     Title:string;
-    API_VALUE:string;
+    API_VALUE:number | string;
 }
 
 export default function Card({iconImage,iconColor,Title,API_VALUE}:cardProps){

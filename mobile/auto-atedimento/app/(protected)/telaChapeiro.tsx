@@ -1,29 +1,27 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Animated } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RFPercentage } from 'react-native-responsive-fontsize';
 
-// Removendo MOCKS, usando apenas as interfaces de dados reais
-// O PedidoView que vem do backend deve ter esta estrutura:
 interface ItemPedidoView {
   id: number;
   nomeProduto: string;
   quantidade: number;
-  precoUnitario: number; // Em R$ (Double)
-  precoTotalItem: number; // Em R$ (Double)
+  precoUnitario: number; 
+  precoTotalItem: number;
 }
 
 interface Pedido {
   id: number;
-  // Deve suportar o status AGUARDANDO_PAGAMENTO do backend
   status: 'AGUARDANDO_PAGAMENTO' | 'NA_FILA' | 'PREPARANDO' | 'FINALIZADO';
   dataCriacao: string;
   itens: ItemPedidoView[];
   metodoPagamento: string;
-  total: number; // Em R$ (Double)
+  total: number; 
   observacao?: string;
 }
 
@@ -42,25 +40,44 @@ export default function ChapeiroScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const fetchPedidos = async () => {
-    setLoading(true);
+  // 🔥 ANIMAÇÃO DO BOTÃO — piscar
+  const blinkAnim = useState(new Animated.Value(1))[0];
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(blinkAnim, {
+          toValue: 0.2,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(blinkAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        })
+      ])
+    ).start();
+  }, []);
+
+  const fetchPedidos = useCallback(async (isBackground = false) => {
+    if (!isBackground && !refreshing) setLoading(true);
+    
     try {
-        // 1. CHAMA A API PARA BUSCAR TODOS OS PEDIDOS
-        // Assumimos que a API retorna um array de PedidoView
         const todosPedidos = await api('/api/pedidos', { auth: true }) as Pedido[];
         
-        // 2. SEPARA OS PEDIDOS EM DUAS LISTAS
+        const pendentes = todosPedidos.filter(p => p.status === 'AGUARDANDO_PAGAMENTO');
+        setPagamentosPendentes(prev => {
+             if (JSON.stringify(prev) !== JSON.stringify(pendentes)) return pendentes;
+             return prev;
+        });
         
-        // A) Pedidos AGUARDANDO PAGAMENTO (Notificação)
-        const pendentes = todosPedidos.filter(p => p.status === 'AGUARDANDO_PAGAMENTO' && p.metodoPagamento === 'Dinheiro');
-        setPagamentosPendentes(pendentes);
+        if (pendentes.length === 0) setShowDropdown(false);
         
-        // B) Pedidos para o Quadro de Produção
         const producao = todosPedidos.filter(p => 
             ['NA_FILA', 'PREPARANDO', 'FINALIZADO'].includes(p.status)
         );
 
-        // 3. ORDENA O QUADRO DE PRODUÇÃO
         producao.sort((a, b) => {
             const priorityA = statusPriority[a.status] || 99;
             const priorityB = statusPriority[b.status] || 99;
@@ -68,45 +85,41 @@ export default function ChapeiroScreen() {
             return a.id - b.id;
         });
 
-        setPedidosProducao(producao);
+        setPedidosProducao(prev => {
+            if (JSON.stringify(prev) !== JSON.stringify(producao)) return producao;
+            return prev;
+        });
 
     } catch (error) {
       console.error(error);
-      Alert.alert("Erro", "Não foi possível carregar a fila de pedidos.");
+      if (!isBackground && !refreshing) Alert.alert("Erro", "Não foi possível carregar a fila.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [refreshing]);
 
   useEffect(() => {
-    fetchPedidos();
-    // Opcional: Polling para atualizar pedidos a cada 15 segundos
-    const interval = setInterval(fetchPedidos, 15000);
+    fetchPedidos(false);
+    const interval = setInterval(() => fetchPedidos(true), 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchPedidos]);
 
-  // Ao confirmar pagamento, o pedido entra na fila de produção (muda status para NA_FILA)
   const confirmarPagamento = async (id: number) => {
       try {
-        // CHAMADA API: Atualiza status do pedido para 'NA_FILA'
         await api(`/api/pedidos/${id}/status`, {
             method: 'PATCH',
             auth: true,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'NA_FILA' })
         });
-        
-        // Recarrega todos os pedidos para atualizar a tela
-        fetchPedidos(); 
-        Alert.alert("Sucesso", `Pagamento recebido! Pedido #${id} enviado para a fila.`);
-
+        fetchPedidos(true); 
+        Alert.alert("Sucesso", "Pagamento confirmado!");
       } catch (e) {
           Alert.alert("Erro", "Falha ao confirmar pagamento.");
       }
   };
 
-  // Função para avançar o status (NA_FILA -> PREPARANDO -> FINALIZADO)
   const avancarStatus = async (pedidoId: number, statusAtual: string) => {
     let novoStatus = '';
     if (statusAtual === 'NA_FILA') novoStatus = 'PREPARANDO';
@@ -114,19 +127,15 @@ export default function ChapeiroScreen() {
     else return;
 
     try {
-        // CHAMADA API: Atualiza status do pedido
         await api(`/api/pedidos/${pedidoId}/status`, {
             method: 'PATCH',
             auth: true,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: novoStatus })
         });
-
-        // Atualiza localmente e reordena
-        fetchPedidos(); 
-
+        fetchPedidos(true); 
     } catch (error) {
-        Alert.alert("Erro", "Falha ao atualizar status do pedido.");
+        Alert.alert("Erro", "Falha ao atualizar status.");
     }
   };
 
@@ -156,193 +165,241 @@ export default function ChapeiroScreen() {
 
     return (
       <View key={pedido.id} style={[styles.card, isFinalizado && styles.cardDimmed]}>
-        <Text style={styles.cardTitle}>#{pedido.id}</Text>
-        
-        <View style={[styles.statusBadge, { borderColor: statusColor }]}>
-            <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
+        <View>
+            <Text style={styles.cardTitle}>#{pedido.id}</Text>
+            <View style={[styles.statusBadge, { borderColor: statusColor }]}>
+                <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
+            </View>
+
+            <View style={styles.itemsContainer}>
+                <Text style={styles.sectionTitle}>Descrição do pedido</Text>
+                {pedido.itens.map((item, index) => (
+                    <Text key={index} style={styles.itemText}>
+                        • {item.quantidade}x {item.nomeProduto}
+                    </Text>
+                ))}
+            </View>
         </View>
 
-        <View style={styles.itemsContainer}>
-            <Text style={styles.sectionTitle}>Descrição do pedido</Text>
-            {pedido.itens.map((item, index) => (
-                <Text key={index} style={styles.itemText}>
-                    • {item.quantidade}x {item.nomeProduto}
-                </Text>
-            ))}
-            <Text style={{ marginTop: 10, fontSize: 18, fontWeight: '700', color: '#4A0404'}}>
-                Total: R$ {pedido.total.toFixed(2)}
-            </Text>
-        </View>
+        <View>
+            <View style={styles.totalContainer}>
+                <Text style={styles.totalLabel}>TOTAL:</Text>
+                <Text style={styles.totalValue}>R$ {pedido.total.toFixed(2).replace('.', ',')}</Text>
+            </View>
 
-        <View style={styles.obsContainer}>
-             <Text style={styles.sectionTitle}>Observações:</Text>
-             <Text style={styles.obsText}>{pedido.observacao || "Nenhuma"}</Text>
-        </View>
+            <View style={styles.obsContainer}>
+                <Text style={styles.sectionTitle}>Observações:</Text>
+                <Text style={styles.obsText}>{pedido.observacao || "Nenhuma"}</Text>
+            </View>
 
-        {!isFinalizado && (
-            <TouchableOpacity 
-                style={[styles.actionButton, { backgroundColor: btnColor }]}
-                onPress={() => avancarStatus(pedido.id, pedido.status)}
-            >
-                <Text style={styles.actionButtonText}>{btnText}</Text>
-            </TouchableOpacity>
-        )}
+            {!isFinalizado && (
+                <TouchableOpacity 
+                    style={[styles.actionButton, { backgroundColor: btnColor }]}
+                    onPress={() => avancarStatus(pedido.id, pedido.status)}
+                >
+                    <Text style={styles.actionButtonText}>{btnText}</Text>
+                </TouchableOpacity>
+            )}
+        </View>
       </View>
     );
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <LinearGradient
+        colors={['#7E0000', '#520000']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 0 }}
+        style={styles.container}
+    >
       <View style={styles.header}>
+        
         <View style={styles.headerLeft}>
-            <Text style={styles.headerLogo}>CHAPA</Text>
-        </View>
+          <View style={styles.notificationArea}>
 
-        {/* Área de Notificação */}
-        <View style={styles.notificationArea}>
             {pagamentosPendentes.length > 0 && (
-                <TouchableOpacity 
-                    style={styles.alertButton} 
-                    onPress={() => setShowDropdown(!showDropdown)}
-                >
-                    <Text style={styles.alertText}>
-                        💰 Receber Dinheiro ({pagamentosPendentes.length})
-                    </Text>
-                    <Ionicons name={showDropdown ? "chevron-up" : "chevron-down"} size={24} color="black" />
-                </TouchableOpacity>
+                <Animated.View style={{ opacity: blinkAnim }}>
+                  <TouchableOpacity 
+                      style={styles.alertButton} 
+                      onPress={() => setShowDropdown(!showDropdown)}
+                  >
+                      <Text style={styles.alertText}>
+                          💰 Receber Dinheiro ({pagamentosPendentes.length})
+                      </Text>
+                      <Ionicons name={showDropdown ? "chevron-up" : "chevron-down"} size={24} color="black" />
+                  </TouchableOpacity>
+                </Animated.View>
             )}
         </View>
 
-        <TouchableOpacity style={styles.logoffButton} onPress={handleSignOut}>
-            <Text style={styles.logoffText}>Logoff</Text>
-            <Ionicons name="log-out-outline" size={24} color="black" />
-        </TouchableOpacity>
+            <TouchableOpacity 
+                style={styles.settingsButton}
+                onPress={() => router.replace('/(protected)/definicaoProdutos')}
+            >
+                <Ionicons name="options" size={24} color="#201000" />
+                <Text style={styles.settingsButtonText}>Produtos Disponíveis</Text>
+            </TouchableOpacity>
+        </View>
+
+          <Text style={styles.mainTitle}>CHAPA</Text>
+
+        <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.logoffButton} onPress={handleSignOut}>
+                <Text style={styles.logoffText}>Logoff</Text>
+                <Ionicons name="log-out-outline" size={30} color="white" />
+            </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Dropdown de Pagamentos */}
       {showDropdown && pagamentosPendentes.length > 0 && (
           <View style={styles.dropdownContainer}>
               <Text style={styles.dropdownHeaderTitle}>Pagamentos Pendentes</Text>
-              {pagamentosPendentes.map(p => (
-                  <View key={p.id} style={styles.dropdownItem}>
-                      <View style={{flex: 1}}>
-                          <Text style={styles.dropdownTitle}>Pedido #{p.id}</Text>
-                          <Text style={styles.dropdownValue}>
-                             Total: <Text style={{fontWeight:'bold', color:'#A11613'}}>R$ {p.total.toFixed(2)}</Text>
-                          </Text>
-                          <Text style={styles.dropdownValue}>
-                             Método: {p.metodoPagamento}
-                          </Text>
+              <ScrollView style={{maxHeight: 300}}>
+                  {pagamentosPendentes.map(p => (
+                      <View key={p.id} style={styles.dropdownItem}>
+                          <View style={{flex: 1}}>
+                              <Text style={styles.dropdownTitle}>Pedido #{p.id}</Text>
+                              <Text style={styles.dropdownValue}>
+                                 Total: <Text style={{fontWeight:'bold', color:'#A11613'}}>R$ {p.total.toFixed(2).replace('.', ',')}</Text>
+                              </Text>
+                          </View>
+                          <TouchableOpacity 
+                            style={styles.confirmButton}
+                            onPress={() => confirmarPagamento(p.id)}
+                          >
+                              <Text style={styles.confirmButtonText}>Confirmar</Text>
+                          </TouchableOpacity>
                       </View>
-                      <TouchableOpacity 
-                        style={styles.confirmButton}
-                        onPress={() => confirmarPagamento(p.id)}
-                      >
-                          <Text style={styles.confirmButtonText}>Confirmar Recebimento</Text>
-                      </TouchableOpacity>
-                  </View>
-              ))}
+                  ))}
+              </ScrollView>
           </View>
       )}
 
-      {/* Body (Quadro de Produção) */}
       <View style={styles.body}>
-        {loading ? (
+        {loading && !refreshing ? (
             <ActivityIndicator size="large" color="#F39D0A" />
         ) : (
             <ScrollView 
-                horizontal 
+                horizontal={true}
+                pagingEnabled={false}
                 contentContainerStyle={styles.scrollContent}
                 showsHorizontalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={() => {
-                        setRefreshing(true);
-                        fetchPedidos();
-                    }} />
+                    <RefreshControl 
+                        refreshing={refreshing} 
+                        onRefresh={() => {
+                            setRefreshing(true);
+                            fetchPedidos(false);
+                        }} 
+                        tintColor="#F39D0A"
+                    />
                 }
             >
                 {pedidosProducao.length === 0 ? (
-                    <Text style={styles.emptyText}>Nenhum pedido na fila de produção.</Text>
+                    <View style={styles.emptyContainer}>
+                         <Text style={styles.emptyText}>Nenhum pedido na fila de produção.</Text>
+                    </View>
                 ) : (
                     pedidosProducao.map(renderCard)
                 )}
             </ScrollView>
         )}
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#4A0404',
+  },
+  mainTitleContainer: {
+      alignItems: 'center',
+      paddingTop: RFPercentage(2),
+      paddingBottom: 5,
+      backgroundColor: 'rgba(32, 16, 0, 0.3)', 
+      zIndex: 11,
+  },
+  mainTitle: {
+    color: '#F39D0A', 
+    fontSize: 40,
+    fontWeight: 'bold',
+    letterSpacing: 2,
   },
   header: {
-    height: RFPercentage(12),
-    backgroundColor: '#201000',
+    height: RFPercentage(14),
+    backgroundColor: 'rgba(32, 16, 0, 0.6)', 
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingBottom: 15,
-    paddingHorizontal: 20,
-    justifyContent: 'space-between',
-    zIndex: 10,
-  },
-  headerLeft: { flex: 1 },
-  notificationArea: {
-    flex: 3, 
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    paddingHorizontal: RFPercentage(2),
+    paddingVertical: RFPercentage(1),
+    justifyContent: 'space-between',
   },
-  headerLogo: {
-    color: '#F39D0A',
-    fontSize: 24,
-    fontWeight: 'bold',
+  headerLeft: { 
+      flex: 1,
+      alignItems: 'flex-start',
+  },
+  notificationArea: {
+    flex: 1, 
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerRight: {
+      flex: 1, 
+      alignItems: 'flex-end',
+  },
+  settingsButton: {
+    flexDirection: 'row',
+    backgroundColor: '#F39D0A', 
+    width: RFPercentage(23),
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    gap: 8
+  },
+  settingsButtonText: {
+      fontWeight: '500',
+      color: '#201000',
+      fontSize: 25
   },
   logoffButton: {
-    flex: 1,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: 5,
+    backgroundColor: '#A11613',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    gap: 8,
   },
   logoffText: {
     color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginRight: 5,
+    fontWeight: '500',
+    fontSize: 25,
   },
-  
-  // --- Estilos do Alerta ---
   alertButton: {
-    backgroundColor: '#FFC107',
-    paddingVertical: 10,
-    paddingHorizontal: 25,
-    borderRadius: 30,
+    backgroundColor: '#F39D0A',
+    paddingVertical: 8,
+    width: RFPercentage(23),
+    borderRadius: RFPercentage(1),
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: '#FFF',
+    justifyContent: 'center',
+    gap: 5,
+    marginBottom: RFPercentage(1),
   },
   alertText: {
     color: 'black',
-    fontWeight: 'bold',
-    fontSize: 18,
+    fontWeight: '500',
+    fontSize: 25,
   },
-
-  // --- Estilos do Dropdown ---
   dropdownContainer: {
     position: 'absolute',
-    top: RFPercentage(12) + 10,
+    top: RFPercentage(8),
+    left: 0,
     alignSelf: 'center',
-    width: '60%',
+    width: '50%', 
     backgroundColor: 'white',
     borderRadius: 15,
     padding: 15,
@@ -356,12 +413,15 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
   },
   dropdownHeaderTitle: {
-      fontSize: 20,
+      fontSize: 18,
       fontWeight: 'bold',
       textAlign: 'center',
       marginBottom: 15,
       color: '#201000',
-      textTransform: 'uppercase'
+      textTransform: 'uppercase',
+      borderBottomWidth: 1,
+      borderBottomColor: '#eee',
+      paddingBottom: 10
   },
   dropdownItem: {
     flexDirection: 'row',
@@ -370,55 +430,44 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#f9f9f9',
-    marginBottom: 5,
-    borderRadius: 8,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff',
   },
-  dropdownTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  dropdownValue: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 2,
-  },
+  dropdownTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  dropdownValue: { fontSize: 16, color: '#666', marginTop: 2 },
   confirmButton: {
     backgroundColor: '#28a745',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
   },
-  confirmButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
+  confirmButtonText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
 
-  // --- Corpo e Cards ---
   body: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingVertical: 40,
     alignItems: 'center',
     gap: 20,
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyContainer: {
+      width: Dimensions.get('window').width,
+      alignItems: 'center',
+      justifyContent: 'center',
   },
   emptyText: {
     color: 'white',
-    fontSize: 22,
+    fontSize: 20,
     textAlign: 'center',
     opacity: 0.8
   },
   card: {
     width: 320,
-    height: '85%',
+    height: '80%',
     backgroundColor: 'white',
     borderRadius: 25,
     padding: 20,
@@ -428,13 +477,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 5,
+    marginVertical: 20,
   },
   cardDimmed: {
     backgroundColor: '#e0e0e0',
     opacity: 0.9,
   },
   cardTitle: {
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 10,
@@ -443,12 +493,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 20,
     paddingVertical: 5,
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 15,
   },
   statusText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
@@ -456,28 +506,47 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     textDecorationLine: 'underline',
-    marginBottom: 10,
+    marginBottom: 8,
     fontWeight: '600',
   },
   itemText: {
-    fontSize: 20,
-    marginBottom: 8,
+    fontSize: 18,
+    marginBottom: 5,
     fontWeight: 'bold',
     color: '#333',
   },
+  totalContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderTopWidth: 1,
+      borderTopColor: '#eee',
+      paddingTop: 10,
+      marginBottom: 10
+  },
+  totalLabel: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: '#333'
+  },
+  totalValue: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: '#A11613',
+  },
   obsContainer: {
-    marginBottom: 20,
-    minHeight: 60,
+    marginBottom: 15,
+    minHeight: 50,
   },
   obsText: {
-    fontSize: 18,
+    fontSize: 16,
     fontStyle: 'italic',
     color: '#555',
   },
   actionButton: {
-    paddingVertical: 18,
+    paddingVertical: 15,
     borderRadius: 30,
     alignItems: 'center',
     shadowColor: '#000',
@@ -488,7 +557,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: 'white',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
   },
 });

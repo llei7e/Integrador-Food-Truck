@@ -65,4 +65,8 @@ public class PedidosDto {
             Long truckId,
             List<ItemPedidoView> itens
     ) {}
+
+    public static record AtualizarStatusRequest(
+        String status
+    ) {}
 }

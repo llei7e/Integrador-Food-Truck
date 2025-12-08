@@ -58,7 +58,8 @@ public class PedidoService {
             
             // Assumindo que prod.getPreco() retorna o valor em centavos (Integer)
             // Converte o preço do produto para R$ (Double) antes de somar
-            totalCalculado += (prod.getPreco() / 100.0) * itemDto.quantidade();
+            totalCalculado += prod.getPreco() * itemDto.quantidade();
+
             
             pedido.adicionarItem(itemPedido);
         }
@@ -85,4 +86,14 @@ public class PedidoService {
     public boolean existe(Long id) {
         return pedidoRepo.existsById(id);
     }
+
+    @Transactional
+    public Pedido atualizarStatus(Long id, String novoStatus) {
+        Pedido pedido = pedidoRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido não encontrado"));
+
+        pedido.setStatus(novoStatus);
+        return pedidoRepo.save(pedido);
+    }
+
 }
