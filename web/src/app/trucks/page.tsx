@@ -5,7 +5,8 @@ import Table from "../components/tableTruck";
 import Card from "../components/ui/card";
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
-import { getTrucks, Truck } from "@/services/trucks";
+import { useRouter } from "next/navigation";
+import { getTrucks } from "@/services/trucks";
 import { getPedidos, Pedido } from "@/services/pedidos";
 
 const MapView = dynamic(() => import('@/components/map'), {
@@ -18,7 +19,16 @@ const ChartTruck = dynamic(() => import('@/components/ChartTruck'), {
   loading: () => <p>Carregando gráfico...</p>,
 });
 
+interface Truck {
+  id: number;
+  localizacao: string;
+  ativo: boolean;
+  vendas?: number;
+  pedidos?: number;
+}
+
 export default function Trucks() {
+  const router = useRouter();
   const [valorVendas, setValorVendas] = useState("Carregando ...");
   const [numeroPedidos, setNumeroPedidos] = useState("Carregando ...");
   const [statusTruck, setStatusTruck] = useState("Carregando ...");
@@ -65,9 +75,11 @@ export default function Trucks() {
         }
       } catch (error: any) {
         console.error("Erro ao carregar dados:", error);
-        if (error.message.includes("401") || error.message.includes("Sessão expirada")) {
-          console.error("Token inválido – redirecione para login");
-          // Opcional: use next/router para push('/login');
+        if (error.message === "NO_TOKEN" || error.message === "TOKEN_INVALID") {
+          console.error("Token inválido ou ausente – redirecionando para login");
+          localStorage.removeItem('token');
+          router.push('/');
+          return;
         }
         setValorVendas("Erro ao carregar lista");
         setNumeroPedidos("Erro ao carregar lista");
@@ -77,9 +89,8 @@ export default function Trucks() {
       }
     };
     fetchData();
-  }, []);
+  }, [router]);
 
-  // Atualiza dados das cards baseado na seleção
   useEffect(() => {
     if (trucksList.length === 0) {
       setValorVendas("Nenhum truck cadastrado");
