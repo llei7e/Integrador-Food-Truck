@@ -15,10 +15,10 @@ public class UsuarioService {
 
   private final UsuarioRepository repo;
 
-  public Usuario criar(String nome, String tipo) {
+  public Usuario criar(String name, String cargo) {
     Usuario u = new Usuario();
-    u.setNome(nome);
-    u.setTipo(tipo);
+    u.setName(name);
+    u.setCargo(cargo);
     return repo.save(u);
   }
 
