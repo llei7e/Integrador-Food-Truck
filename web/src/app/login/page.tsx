@@ -45,21 +45,6 @@ export default function Login() {
     }
   }
 
-  async function handleRegister() {
-    try {
-      setLoading(true);
-      setErro(null);
-
-      await register(email, senha);
-
-      alert("Usuário registrado com sucesso! Agora faça login.");
-    } catch (e: any) {
-      setErro(e.message || "Erro ao registrar usuário.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <div className="flex h-dvh w-full">
       <div className="hidden md:block md:w-3/5 bg-amber-600" />
