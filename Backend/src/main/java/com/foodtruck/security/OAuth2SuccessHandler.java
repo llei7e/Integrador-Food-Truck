@@ -2,7 +2,6 @@ package com.foodtruck.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodtruck.domain.repo.UserRepository;
-import com.foodtruck.entity.RoleName;
 import com.foodtruck.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -35,36 +34,39 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
             String email = (String) oAuth2User.getAttributes().get("email");
 
-            // pega o redirect que o frontend mandou na URL: ?redirect=http://localhost:8081/oauth-google
             String frontendRedirect = request.getParameter("redirect");
             if (frontendRedirect == null || frontendRedirect.isBlank()) {
-                // fallback: se não mandou nada, manda pra /oauth-google mesmo
                 frontendRedirect = "http://localhost:8081/oauth-google";
             }
 
-            // carrega usuário e gera jwt
+            // Carrega usuário do banco
             User user = userRepo.findByEmail(email).orElseThrow();
             var userDetails = UserDetailsImpl.build(user);
             String jwt = jwtUtils.generateJwtToken(userDetails);
 
-            String role = user.getRoles().stream()
-                    .anyMatch(r -> r.getName() == RoleName.ROLE_ADMIN)
-                    ? "admin" : "user";
+            // --- LÓGICA DIRETA DO BANCO ---
+            // Lê exatamente o que está escrito na coluna 'cargo'
+            String cargo = user.getCargo();
+            
+            // Fallback apenas se estiver nulo no banco
+            if (cargo == null || cargo.isBlank()) {
+                cargo = "USUARIO";
+            }
+            // -----------------------------
 
-            // mesmo JSON que você tinha antes
             Map<String, Object> body = new HashMap<>();
             body.put("access_token", jwt);
             body.put("token_type", "bearer");
+            
             body.put("user", Map.of(
                     "id", user.getId(),
                     "name", user.getName(),
                     "email", user.getEmail(),
-                    "role", role
+                    "cargo", cargo // Envia o valor puro do banco
             ));
 
             String json = mapper.writeValueAsString(body);
 
-            // monta a URL final: <redirect do frontend>?payload=<json>
             String redirectUrl = frontendRedirect
                     + (frontendRedirect.contains("?") ? "&" : "?")
                     + "payload=" + URLEncoder.encode(json, StandardCharsets.UTF_8);
@@ -77,7 +79,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                 response.setContentType("application/json");
                 mapper.writeValue(response.getWriter(),
-                        Map.of("error", "Falha ao concluir login com Google"));
+                        Map.of("error", "Falha ao concluir login com Google: " + ex.getMessage()));
             } catch (Exception ignored) {}
         }
     }
