@@ -6,7 +6,7 @@ export interface Produto {
     id: number;
     nome: string;
     preco: number;
-    ativo: boolean;
+    ativo: boolean; // O Frontend continua vendo como boolean (true/false)
     categoriaId: number; 
     descricao: string;
 }
@@ -18,10 +18,16 @@ export function useProdutos() {
     const fetchProdutos = useCallback(async () => {
         setLoading(true);
         try {
-            // Busca todos os produtos (ativo e inativo)
             const data = await api('/api/produtos', { auth: true }) as Produto[];
-            // Ordena por categoria e depois por nome
-            data.sort((a, b) => a.categoriaId - b.categoriaId || a.nome.localeCompare(b.nome));
+            
+            // Ordenação segura
+            data.sort((a, b) => {
+                const catA = a.categoriaId ?? 0;
+                const catB = b.categoriaId ?? 0;
+                if (catA !== catB) return catA - catB;
+                return (a.nome || "").localeCompare(b.nome || "");
+            });
+            
             setProdutos(data);
         } catch (e) {
             console.error("Erro ao buscar produtos:", e);
@@ -38,28 +44,31 @@ export function useProdutos() {
     const toggleAtivo = useCallback(async (produtoId: number, statusAtual: boolean) => {
         const novoStatus = !statusAtual;
 
-        // 1. Atualização Otimista (Muda na tela antes de confirmar no banco)
+        // 1. Atualização Otimista (Visual): Aqui usamos boolean normal
         setProdutos(prev => prev.map(p => 
             p.id === produtoId ? { ...p, ativo: novoStatus } : p
         ));
         
         try {
-            // 2. Envia para o backend
-            // OBS: Seu backend precisa ter um endpoint PATCH ou PUT para atualizar o produto
-            // Exemplo: PATCH /api/produtos/{id} com body { "ativo": true/false }
-            await api(`/api/produtos/${produtoId}`, {
-                method: 'PATCH', // Ou PUT, dependendo do seu backend
+            // --- CORREÇÃO AQUI ---
+            // O backend é "burro" e quer 0 ou 1? Então toma 0 ou 1!
+            // Convertemos: true vira 1, false vira 0
+            const payload = { ativo: novoStatus ? 1 : 0 }; 
+
+            await api(`/api/produtos/${produtoId}/ativo`, {
+                method: 'PATCH',
                 auth: true,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ativo: novoStatus })
+                body: JSON.stringify(payload) // Envia { "ativo": 1 } ou { "ativo": 0 }
             });
 
         } catch (e) {
-            // 3. Se der erro, reverte a mudança na tela
+            console.error("Erro no toggleAtivo:", e);
+            // Reverte a mudança visual se der erro
             setProdutos(prev => prev.map(p => 
                 p.id === produtoId ? { ...p, ativo: statusAtual } : p
             ));
-            Alert.alert("Erro", "Falha ao atualizar status. Tente novamente.");
+            Alert.alert("Erro", "Falha ao atualizar status. Verifique sua conexão.");
         }
     }, []);
 

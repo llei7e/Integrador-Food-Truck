@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // Adicionado useCallback
 import { 
   StyleSheet, 
   Image, 
@@ -8,7 +8,8 @@ import {
   Text, 
   View,
   ActivityIndicator,
-  ImageSourcePropType 
+  ImageSourcePropType,
+  RefreshControl // Adicionado RefreshControl
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
@@ -23,10 +24,10 @@ interface Produto {
   descricao: string;
   preco: number;
   ativo: boolean;
-  categoriaId: number; // Importante!
+  categoriaId: number; 
 }
 
-// Interface Categoria (para nosso uso local)
+// Interface Categoria
 interface Categoria {
     id: number;
     nome: string;
@@ -38,7 +39,6 @@ const lancheImage = require('../../../assets/images/lanche1.jpg');
 const comboImage = require('../../../assets/images/fritas.jpg');
 const bebidaImage = require('../../../assets/images/bebida1.jpg');
 
-// Imagens dos ícones das categorias
 const iconLanche = require('../../../assets/images/lanche.png');
 const iconCombo = require('../../../assets/images/fritas.png');
 const iconBebida = require('../../../assets/images/bebidas.png');
@@ -56,7 +56,6 @@ const getImageForItem = (categoriaId: number): ImageSourcePropType => {
   }
 };
 
-// Helper para pegar o ícone da categoria
 const getIconForCategory = (categoriaId: number): ImageSourcePropType => {
     switch (categoriaId) {
       case 1: return iconLanche;
@@ -66,71 +65,97 @@ const getIconForCategory = (categoriaId: number): ImageSourcePropType => {
     }
 };
 
-// Helper para mapear ID -> Nome (caso o backend não mande o objeto categoria completo)
 const getCategoryName = (id: number) => {
     switch(id) {
         case 1: return "Lanches";
-        case 2: return "Acompanhamentos"; // ou Combos, ajuste conforme seu banco
+        case 2: return "Acompanhamentos"; 
         case 3: return "Bebidas";
         default: return "Outros";
     }
 }
 
-
 export default function TabOneScreen() {
-  // Estado para armazenar o ID da categoria selecionada (começa com 1 = Lanches)
   const [selectedCategoryId, setSelectedCategoryId] = useState<number>(1);
-  
   const [allProdutos, setAllProdutos] = useState<Produto[]>([]); 
-  // Estado para as categorias disponíveis (extraídas dos produtos)
   const [categoriasDisponiveis, setCategoriasDisponiveis] = useState<Categoria[]>([]);
-  
   const [displayedItems, setDisplayedItems] = useState<Produto[]>([]); 
+  
   const [loading, setLoading] = useState(true); 
+  const [refreshing, setRefreshing] = useState(false); // Estado para o pull-to-refresh
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
   const { signOut } = useAuth();
   const { addToCart, clearCart } = useCart();
 
-  // 1. Busca Produtos e Extrai Categorias
-  useEffect(() => {
-    const fetchAllItems = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data: Produto[] = await api('/api/produtos', { auth: true });
-        const produtosAtivos = data.filter(p => p.ativo);
-        setAllProdutos(produtosAtivos);
+  // --- BUSCA DE DADOS INTELIGENTE ---
+  const fetchAllItems = useCallback(async (isBackground = false) => {
+    // Só mostra loading visual se NÃO for background e NÃO estiver puxando pra atualizar
+    if (!isBackground && !refreshing) {
+        setLoading(true);
+    }
+    
+    // Limpa erro apenas se for interação do usuário, para não piscar erro em background
+    if (!isBackground) setError(null);
 
-        // Extrai categorias únicas dos produtos
-        const catIds = Array.from(new Set(produtosAtivos.map(p => p.categoriaId))).sort();
-        
-        // Monta o objeto de categorias para exibir os botões
-        const cats: Categoria[] = catIds.map(id => ({
-            id: id,
-            nome: getCategoryName(id),
-            imagem: getIconForCategory(id)
-        }));
-        setCategoriasDisponiveis(cats);
+    try {
+      const data: Produto[] = await api('/api/produtos', { auth: true });
+      const produtosAtivos = data.filter(p => p.ativo);
+      
+      // 1. Atualiza Produtos SOMENTE se mudou
+      setAllProdutos(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(produtosAtivos)) {
+              return produtosAtivos;
+          }
+          return prev;
+      });
 
-      } catch (e: any) {
-        console.error(e);
-        setError('Não foi possível carregar os produtos.');
-      } finally {
-        setLoading(false);
+      // 2. Lógica das categorias
+      const catIds = Array.from(new Set(produtosAtivos.map(p => p.categoriaId))).sort();
+      const cats: Categoria[] = catIds.map(id => ({
+          id: id,
+          nome: getCategoryName(id),
+          imagem: getIconForCategory(id)
+      }));
+      
+      // 3. Atualiza Categorias SOMENTE se mudou
+      setCategoriasDisponiveis(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(cats)) {
+              return cats;
+          }
+          return prev;
+      });
+
+    } catch (e: any) {
+      console.error(e);
+      // Evita mostrar erro na tela se for uma atualização em background que falhou
+      if (!isBackground) {
+          if (e instanceof ApiError) {
+            setError(`Erro ${e.status}: ${e.message}`);
+          } else {
+            setError('Não foi possível carregar os produtos.');
+          }
       }
-    };
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [refreshing]);
 
-    fetchAllItems();
-  }, []); 
+  // --- EFEITO DE POLLING (Atualiza a cada 5 segundos) ---
+  useEffect(() => {
+    fetchAllItems(false); // Carga inicial
+    const interval = setInterval(() => fetchAllItems(true), 5000); // Background
+    return () => clearInterval(interval);
+  }, [fetchAllItems]);
+
 
   const handleSignOut = () => {
     clearCart();
     signOut();
   };
 
-  // 2. Filtra produtos quando a categoria selecionada muda
+  // Filtra produtos quando a categoria ou a lista muda
   useEffect(() => {
     if (allProdutos.length > 0) {
         const filtered = allProdutos.filter(
@@ -140,17 +165,28 @@ export default function TabOneScreen() {
     }
   }, [selectedCategoryId, allProdutos]); 
 
+  // Garante que uma categoria válida esteja selecionada
+  useEffect(() => {
+      if (categoriasDisponiveis.length > 0) {
+          const existe = categoriasDisponiveis.find(c => c.id === selectedCategoryId);
+          if (!existe) {
+              setSelectedCategoryId(categoriasDisponiveis[0].id);
+          }
+      }
+  }, [categoriasDisponiveis]);
+
 
   const renderContent = () => {
-    if (loading) {
+    // Se estiver carregando pela primeira vez (e não for refresh manual)
+    if (loading && !refreshing && allProdutos.length === 0) {
       return <ActivityIndicator size="large" color="#A11613" style={styles.centered} />;
     }
 
-    if (error) {
+    if (error && allProdutos.length === 0) {
       return <Text style={styles.errorText}>{error}</Text>;
     }
 
-    if (!loading && displayedItems.length === 0) {
+    if (!loading && displayedItems.length === 0 && allProdutos.length > 0) {
       return <Text style={styles.emptyText}>Nenhum item encontrado para esta categoria.</Text>;
     }
 
@@ -206,14 +242,9 @@ export default function TabOneScreen() {
         </TouchableOpacity>
       </View>
       
-      {/* --- CATEGORIAS DINÂMICAS --- */}
       <View style={styles.categoryButtons}>
         {categoriasDisponiveis.map((cat, index) => {
-            // Define estilo baseado se é o do meio (index 1) ou pontas, ou simplifica para todos iguais
-            // Aqui vou usar uma lógica simples: se for selecionado, muda cor
             const isSelected = selectedCategoryId === cat.id;
-            
-            // Ajuste de estilo para o botão do meio ser maior (opcional, igual ao seu layout original)
             const isMiddle = index === 1; 
             const buttonStyle = isMiddle ? styles.categoryButtonMiddle : styles.categoryButton;
 
@@ -230,17 +261,29 @@ export default function TabOneScreen() {
         })}
       </View>
 
-      <ScrollView contentContainerStyle={styles.menuContainer}>
+      <ScrollView 
+        contentContainerStyle={styles.menuContainer}
+        // Adicionado RefreshControl para puxar e atualizar
+        refreshControl={
+            <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={() => {
+                    setRefreshing(true);
+                    fetchAllItems(false);
+                }}
+                tintColor="#A11613"
+            />
+        }
+      >
         {renderContent()}
       </ScrollView>
     </View>
   );
 }
 
-// --- ESTILOS ---
-// (Seus estilos permanecem os mesmos)
 const { width } = Dimensions.get('window');
 const isMobile = width <= 768; 
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: {
@@ -252,6 +295,16 @@ const styles = StyleSheet.create({
   logo: {
     height: "70%",
     aspectRatio: 1,
+  },
+  logoutButton: {
+    backgroundColor: '#A11613', 
+    padding: 15, 
+    paddingHorizontal: 20, 
+    alignItems: 'center', 
+    position: 'absolute', 
+    top: 20, 
+    right: 20,
+    borderRadius: 10,
   },
   categoryText: {
     fontSize: RFValue(16),
@@ -405,5 +458,4 @@ const styles = StyleSheet.create({
     marginTop: RFValue(50),
     paddingHorizontal: RFValue(20),
   },
-  logoutButton:{}
 });
