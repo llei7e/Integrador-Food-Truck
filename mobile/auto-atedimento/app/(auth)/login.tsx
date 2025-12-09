@@ -1,4 +1,3 @@
-// app/(auth)/login.tsx
 import {
     View,
     Text,
@@ -40,17 +39,22 @@ export default function Login() {
     const [registrationErrors, setRegistrationErrors] = useState<RegistrationErrors>({});
     const [isRegisterFormValid, setIsRegisterFormValid] = useState(false);
 
-    // Pega as funções do AuthContext (incluindo signInWithGoogle)
     const { signIn, signUp, user, loading, signInWithGoogle } = useAuth();
 
-    // Este useEffect cuida do redirecionamento após QUALQUER login
+    // --- REDIRECIONAMENTO INTELIGENTE ---
     useEffect(() => {
         if (!loading && user) {
-            router.replace('/(protected)/(tabs)/home');
+            // Verifica o cargo para decidir a rota inicial
+            if (user.cargo === 'CHAPEIRO') {
+                router.replace('/(protected)/telaChapeiro');
+            } else {
+                // USUARIO ou qualquer outro vai pra Home (Cardápio)
+                router.replace('/(protected)/(tabs)/home');
+            }
         }
     }, [user, loading]);
 
-    // Este useEffect cuida da validação do formulário de cadastro
+    // Validação do formulário de cadastro
     useEffect(() => {
         if (activeTab === 'cadastro') {
             const newErrors: RegistrationErrors = {};
@@ -129,17 +133,14 @@ export default function Login() {
 
     // --- Handler para Login com Google ---
     const handleGoogleLogin = async () => {
-        if (submitting) return; // Evita clique duplo
+        if (submitting) return; 
         setSubmitting(true);
         setErrorMessage(null);
 
         try {
             await signInWithGoogle();
-            // O useEffect no topo (que observa 'user')
-            // cuidará do redirecionamento
-            
+            // O useEffect cuidará do redirecionamento
         } catch (e: any) {
-            // Se o usuário fechar o popup do navegador, cairá aqui
             setErrorMessage(e?.message ?? 'Falha ao fazer login com Google.');
             setSubmitting(false); 
         } 
@@ -153,7 +154,7 @@ export default function Login() {
         );
     }
 
-    if (user) return null;
+    if (user) return null; // Já logado, o useEffect vai redirecionar
 
     return (
         <>
@@ -270,7 +271,7 @@ export default function Login() {
                                 
                                 <TouchableOpacity
                                     style={[{ opacity: submitting ? 0.7 : 1 }]}
-                                    onPress={handleGoogleLogin} // <-- AQUI
+                                    onPress={handleGoogleLogin}
                                     disabled={submitting}
                                 >
                                     <Image
