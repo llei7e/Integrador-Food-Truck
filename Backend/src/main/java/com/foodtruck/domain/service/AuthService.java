@@ -1,6 +1,5 @@
 package com.foodtruck.domain.service;
 
-
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
@@ -14,6 +13,7 @@ import com.foodtruck.entity.User;
 import com.foodtruck.domain.repo.RoleRepository;
 import com.foodtruck.domain.repo.UserRepository;
 import com.foodtruck.security.JwtUtils;
+import com.foodtruck.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -36,7 +36,6 @@ public class AuthService {
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
     private String googleClientId;
 
-
     public AuthResponse register(RegisterRequest req) {
         if (userRepo.existsByEmail(req.email())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Usuário já existe");
@@ -47,91 +46,95 @@ public class AuthService {
         u.setEmail(req.email());
         u.setPassword(encoder.encode(req.password()));
 
-        // role default
-        String roleStr = (req.role() == null || req.role().isBlank()) ? "USER" : req.role().toUpperCase();
-        RoleName rn = RoleName.valueOf(roleStr.equals("ADMIN") ? "ROLE_ADMIN" : "ROLE_USER");
+        // --- DEFINIÇÃO DO CARGO ---
+        // Se o front mandou "CHAPEIRO", salva "CHAPEIRO". Se mandou nada, salva "USUARIO".
+        String cargoParaSalvar = (req.cargo() != null && !req.cargo().isBlank()) 
+                ? req.cargo().toUpperCase() 
+                : "USUARIO";
+        
+        u.setCargo(cargoParaSalvar);
+
+        // Mantém a role técnica do Spring Security (apenas para não quebrar anotações @PreAuthorize internas)
+        RoleName rn = "ADMIN".equals(cargoParaSalvar) ? RoleName.ROLE_ADMIN : RoleName.ROLE_USER;
         Role role = roleRepo.findByName(rn)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role técnica não encontrada"));
         u.getRoles().add(role);
 
         userRepo.save(u);
 
-        var userDetails = com.foodtruck.security.UserDetailsImpl.build(u);
-        String token = jwtUtils.generateJwtToken(userDetails); // <-- usa email no subject + claim "roles"
+        var userDetails = UserDetailsImpl.build(u);
+        String token = jwtUtils.generateJwtToken(userDetails);
+        
+        // Retorna o cargo que acabamos de salvar
         return new AuthResponse(token, "bearer",
-                new UserView(u.getId(), u.getName(), u.getEmail(),
-                        (role.getName().name().equals("ROLE_ADMIN") ? "admin" : "user")));
+                new UserView(u.getId(), u.getName(), u.getEmail(), u.getCargo()));
     }
 
     public AuthResponse login(LoginRequest req) {
-        // autentica usando email como principal
+        // 1. Autentica
         Authentication auth = authManager.authenticate(
             new UsernamePasswordAuthenticationToken(req.email(), req.password())
-    );
+        );
 
-    // pega o usuário autenticado
-    var principal = (com.foodtruck.security.UserDetailsImpl) auth.getPrincipal();
+        var principal = (UserDetailsImpl) auth.getPrincipal();
+        String token = jwtUtils.generateJwtToken(principal);
 
-    // gera token com email no subject e claim "roles"
-    String token = jwtUtils.generateJwtToken(principal);
+        // 2. Busca o usuário fresco no banco para garantir que temos o CARGO atualizado
+        User user = userRepo.findById(principal.getId()).orElseThrow();
 
-    Long userId = principal.getId();
-    String name = principal.getName();
-    String email = principal.getEmail();
-    String roleStr = principal.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")) ? "admin" : "user";
+        // 3. Lê direto do banco. Fallback para "USUARIO" se estiver nulo.
+        String cargoReal = (user.getCargo() != null && !user.getCargo().isBlank()) 
+                ? user.getCargo() 
+                : "USUARIO";
 
-    return new AuthResponse(token, "bearer", new UserView(userId, name, email, roleStr));
-}
-
-public AuthResponse loginComGoogle(GoogleLoginRequest req) {
-    var payload = verificarIdTokenGoogle(req.idToken()); // valida e devolve payload
-
-    String email = payload.getEmail();
-    String nome  = (String) payload.get("name"); // pode vir null
-    String sub   = (String) payload.get("sub");  // Google user id
-
-    // Carrega ou cria usuário local
-    User u = userRepo.findByEmail(email).orElseGet(() -> {
-        User novo = new User();
-        novo.setName(nome != null ? nome : email);
-        novo.setEmail(email);
-        // senha dummy (não usada neste fluxo)
-        novo.setPassword(encoder.encode("google-oauth2-" + sub));
-        Role roleUser = roleRepo.findByName(RoleName.ROLE_USER)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role USER não encontrada"));
-        novo.getRoles().add(roleUser);
-        return userRepo.save(novo);
-    });
-
-    // Gera seu JWT (subject=email + roles)
-    var principal = com.foodtruck.security.UserDetailsImpl.build(u);
-    String token  = jwtUtils.generateJwtToken(principal);
-
-    String roleStr = principal.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")) ? "admin" : "user";
-
-    return new AuthResponse(token, "bearer",
-            new UserView(u.getId(), u.getName(), u.getEmail(), roleStr));
-}
-
-/** Valida o ID Token do Google e retorna o payload (email, name, sub, etc.) */
-private GoogleIdToken.Payload verificarIdTokenGoogle(String idToken) {
-    try {
-        var http = GoogleNetHttpTransport.newTrustedTransport();
-        var json = GsonFactory.getDefaultInstance();
-        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(http, json)
-                .setAudience(java.util.Collections.singletonList(googleClientId))
-                .build();
-
-        GoogleIdToken idTok = verifier.verify(idToken);
-        if (idTok == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "ID Token inválido");
-        return idTok.getPayload();
-    } catch (ResponseStatusException e) {
-        throw e;
-    } catch (Exception e) {
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Falha ao validar ID Token do Google");
+        return new AuthResponse(token, "bearer", 
+                new UserView(user.getId(), user.getName(), user.getEmail(), cargoReal));
     }
-}
 
+    public AuthResponse loginComGoogle(GoogleLoginRequest req) {
+        var payload = verificarIdTokenGoogle(req.idToken());
+        String email = payload.getEmail();
+        String nome  = (String) payload.get("name");
+        String sub   = (String) payload.get("sub");
+
+        User u = userRepo.findByEmail(email).orElseGet(() -> {
+            User novo = new User();
+            novo.setName(nome != null ? nome : email);
+            novo.setEmail(email);
+            
+            // Usuário Google nasce como USUARIO
+            novo.setCargo("USUARIO");
+            
+            novo.setPassword(encoder.encode("google-oauth2-" + sub));
+            Role roleUser = roleRepo.findByName(RoleName.ROLE_USER)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role USER não encontrada"));
+            novo.getRoles().add(roleUser);
+            return userRepo.save(novo);
+        });
+
+        var principal = UserDetailsImpl.build(u);
+        String token  = jwtUtils.generateJwtToken(principal);
+
+        // Retorna o cargo do banco
+        String cargoReal = (u.getCargo() != null) ? u.getCargo() : "USUARIO";
+
+        return new AuthResponse(token, "bearer",
+                new UserView(u.getId(), u.getName(), u.getEmail(), cargoReal));
+    }
+
+    private GoogleIdToken.Payload verificarIdTokenGoogle(String idToken) {
+        try {
+            var http = GoogleNetHttpTransport.newTrustedTransport();
+            var json = GsonFactory.getDefaultInstance();
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(http, json)
+                    .setAudience(java.util.Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idTok = verifier.verify(idToken);
+            if (idTok == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "ID Token inválido");
+            return idTok.getPayload();
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Falha ao validar ID Token do Google");
+        }
+    }
 }

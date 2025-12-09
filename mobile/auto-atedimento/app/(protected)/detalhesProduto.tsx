@@ -20,7 +20,7 @@ interface Produto {
 }
 
 const lancheImage = require('../../assets/images/lanche1.jpg');
-const comboImage = require('../../assets/images/combos.jpg');
+const comboImage = require('../../assets/images/fritas.jpg');
 const bebidaImage = require('../../assets/images/bebida1.jpg');
 
 const getImageForItem = (categoriaId: number): ImageSourcePropType => {
