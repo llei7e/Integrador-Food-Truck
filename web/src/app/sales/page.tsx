@@ -49,8 +49,7 @@ export default function Trucks() {
     <div className="mr-4 ml-4">
       <Header />
       <div className="flex justify-start items-center">
-        <Filter placeholder="Truck: Truck A" icon="bx:calendar" />
-        <Filter placeholder="Data: 10/08/2025 - 20/08/2025" icon="tabler:search" />
+        <Filter placeholder="Data: 10/08/2025 - 20/08/2025" icon="bx:calendar" />
       </div>
 
       <div>
