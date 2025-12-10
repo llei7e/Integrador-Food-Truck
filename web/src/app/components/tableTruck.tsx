@@ -31,9 +31,6 @@ export default function Table({ selectedTruckId, trucksList }: TableProps) {
             <th scope="col" className="px-6 py-3 text-center">
               ENDEREÇO
             </th>
-            <th scope="col" className="px-6 py-3 text-center">
-              STATUS
-            </th>
           </tr>
         </thead>
         <tbody>
@@ -44,9 +41,6 @@ export default function Table({ selectedTruckId, trucksList }: TableProps) {
               </th>
               <td className="px-6 py-4 flex justify-start text-black">
                 {truck.localizacao}
-              </td>
-              <td className="px-6 py-4 text-center">
-                <Status status={truck.ativo ? "active" : "inactive"} /> {/* Assuma que Status aceita isso */}
               </td>
             </tr>
           ))}
