@@ -8,7 +8,6 @@ import OffEye from "../public/favicon/off_eye";
 import OnEye from "../public/favicon/on_eye";
 import logo from "../public/logo.png";
 import Image from "next/image";
-import GoogleButton from "@/components/googleButton";
 
 import { login, register } from "@/services/authService";
 
