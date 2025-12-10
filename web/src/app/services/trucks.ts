@@ -1,4 +1,3 @@
-// src/services/trucks.ts (Serviço para fetch de trucks, com token dinâmico de localStorage)
 export interface Truck {
   id: number;
   localizacao: string;
@@ -24,7 +23,7 @@ export async function getTrucks() {
 
   if (!response.ok) {
     if (response.status === 401) {
-      localStorage.removeItem('token'); // Limpa token inválido
+      localStorage.removeItem('token');
       throw new Error("Sessão expirada. Faça login novamente.");
     }
     throw new Error(`Erro ao buscar trucks: ${response.status}`);
