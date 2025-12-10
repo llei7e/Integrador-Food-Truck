@@ -61,11 +61,12 @@ export default function RegisterPage() {
         <div className="flex flex-col justify-center w-[70%] max-w-md">
           <div className="flex justify-center mb-5">
             <Image
-              priority={false}
+              priority={true}
               src={logo}
-              alt={"logo"}
+              alt={"logo do Food Truck"}
               width={150}
               height={150}
+              style={{ width: 'auto', height: 'auto' }}
             />
           </div>
 
