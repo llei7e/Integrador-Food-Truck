@@ -1,7 +1,3 @@
-// components/map.tsx (Atualizado para Google Maps usando @react-google-maps/api)
-// Nota: Instale com `npm install @react-google-maps/api` e adicione sua API Key do Google Maps em .env.local como NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-// Assuma que localizacao é um endereço string; para markers reais, adicione geocoding ou coords no JSON (ex: adicione lat/lng ao interface).
-
 "use client";
 import { useEffect, useState } from "react";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
