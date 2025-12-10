@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
 import Button from "../components/ui/button";
 import SelectButton from "../components/selectButton";
 import OffEye from "../public/favicon/off_eye";
@@ -28,15 +27,7 @@ export default function Login() {
       setLoading(true);
       setErro(null);
 
-      // chama o backend
-      const data = await login(email, senha); // { token: "..." }
-
-      // salva o token no navegador
-      if (typeof window !== "undefined") {
-        localStorage.setItem("token", data.token);
-      }
-
-      // se deu certo, vai pra tela de vendas
+      const data = await login(email, senha);
       router.push("/sales");
     } catch (e: any) {
       setErro(e.message || "Erro ao fazer login.");
