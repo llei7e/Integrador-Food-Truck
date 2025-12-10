@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
+import java.util.Collections;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -46,32 +48,46 @@ public class AuthService {
         u.setEmail(req.email());
         u.setPassword(encoder.encode(req.password()));
 
-        // --- DEFINIÇÃO DO CARGO ---
-        // Se o front mandou "CHAPEIRO", salva "CHAPEIRO". Se mandou nada, salva "USUARIO".
-        String cargoParaSalvar = (req.cargo() != null && !req.cargo().isBlank()) 
-                ? req.cargo().toUpperCase() 
-                : "USUARIO";
-        
-        u.setCargo(cargoParaSalvar);
+        // 1. DEFINIÇÃO DO CARGO (Lógica de Negócio / Frontend)
+        // Lê o que o front enviou. Se nulo, define "USUARIO".
+        String cargoEnviado = req.cargo();
+        if (cargoEnviado == null || cargoEnviado.isBlank()) {
+            cargoEnviado = "USUARIO";
+        }
+        // Salva no banco em maiúsculo (ex: "CHAPEIRO")
+        u.setCargo(cargoEnviado.toUpperCase());
 
-        // Mantém a role técnica do Spring Security (apenas para não quebrar anotações @PreAuthorize internas)
-        RoleName rn = "ADMIN".equals(cargoParaSalvar) ? RoleName.ROLE_ADMIN : RoleName.ROLE_USER;
+        // 2. DEFINIÇÃO DA ROLE (Segurança do Spring)
+        // Mapeia o cargo para uma Role técnica do sistema
+        RoleName rn;
+        switch (u.getCargo()) {
+            case "ADMIN":
+                rn = RoleName.ROLE_ADMIN;
+                break;
+            case "CHAPEIRO":
+                rn = RoleName.ROLE_CHAPEIRO; // Certifique-se que ROLE_CHAPEIRO existe no Enum RoleName
+                break;
+            default:
+                rn = RoleName.ROLE_USER;
+        }
+
         Role role = roleRepo.findByName(rn)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role técnica não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role técnica não encontrada: " + rn));
         u.getRoles().add(role);
 
         userRepo.save(u);
 
+        // Gera token
         var userDetails = UserDetailsImpl.build(u);
         String token = jwtUtils.generateJwtToken(userDetails);
         
-        // Retorna o cargo que acabamos de salvar
+        // Retorna a resposta com o cargo que acabamos de salvar
         return new AuthResponse(token, "bearer",
                 new UserView(u.getId(), u.getName(), u.getEmail(), u.getCargo()));
     }
 
     public AuthResponse login(LoginRequest req) {
-        // 1. Autentica
+        // 1. Autentica no Spring Security
         Authentication auth = authManager.authenticate(
             new UsernamePasswordAuthenticationToken(req.email(), req.password())
         );
@@ -79,10 +95,11 @@ public class AuthService {
         var principal = (UserDetailsImpl) auth.getPrincipal();
         String token = jwtUtils.generateJwtToken(principal);
 
-        // 2. Busca o usuário fresco no banco para garantir que temos o CARGO atualizado
-        User user = userRepo.findById(principal.getId()).orElseThrow();
+        // 2. Busca o usuário no banco para ler o campo CARGO atualizado
+        User user = userRepo.findById(principal.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
 
-        // 3. Lê direto do banco. Fallback para "USUARIO" se estiver nulo.
+        // 3. Lê o cargo direto do banco. Fallback para "USUARIO".
         String cargoReal = (user.getCargo() != null && !user.getCargo().isBlank()) 
                 ? user.getCargo() 
                 : "USUARIO";
@@ -102,7 +119,7 @@ public class AuthService {
             novo.setName(nome != null ? nome : email);
             novo.setEmail(email);
             
-            // Usuário Google nasce como USUARIO
+            // Novos usuários do Google nascem como USUARIO
             novo.setCargo("USUARIO");
             
             novo.setPassword(encoder.encode("google-oauth2-" + sub));
@@ -127,14 +144,14 @@ public class AuthService {
             var http = GoogleNetHttpTransport.newTrustedTransport();
             var json = GsonFactory.getDefaultInstance();
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(http, json)
-                    .setAudience(java.util.Collections.singletonList(googleClientId))
+                    .setAudience(Collections.singletonList(googleClientId))
                     .build();
 
             GoogleIdToken idTok = verifier.verify(idToken);
             if (idTok == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "ID Token inválido");
             return idTok.getPayload();
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Falha ao validar ID Token do Google");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Falha ao validar ID Token do Google: " + e.getMessage());
         }
     }
 }

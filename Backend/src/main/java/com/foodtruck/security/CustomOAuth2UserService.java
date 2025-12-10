@@ -16,7 +16,6 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -29,7 +28,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final RoleRepository roleRepo;
 
     @Override
-    @Transactional // Importante para carregar as roles (Lazy loading)
+    @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
 
         OAuth2User oAuth2User = super.loadUser(userRequest);
@@ -40,11 +39,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         // 1. Carrega ou Cria o usuário
         User user = userRepo.findByEmail(email).orElseGet(() -> {
-            // Se não existe, cria novo como CLIENTE (USER)
+            // Se não existe, cria novo
             User u = new User();
             u.setEmail(email);
             u.setName(name);
             u.setPassword("{noop}oauth2-user");
+            
+            // --- A CORREÇÃO ESTÁ AQUI ---
+            // Estava faltando dizer que ele é USUARIO no banco
+            u.setCargo("USUARIO"); 
+            // ----------------------------
             
             Role roleUser = roleRepo.findByName(RoleName.ROLE_USER)
                     .orElseGet(() -> roleRepo.save(new Role(RoleName.ROLE_USER)));
@@ -58,16 +62,20 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             user.setName(name);
             userRepo.save(user);
         }
+        
+        // Garante fallback caso o usuário antigo tenha cargo NULL
+        if (user.getCargo() == null) {
+             user.setCargo("USUARIO");
+             userRepo.save(user);
+        }
 
-        // 2. CONVERTE AS ROLES DO BANCO PARA O SPRING SECURITY
-        // Aqui está a correção: pegamos o que está no banco (user.getRoles)
+        // 2. Converte roles para o Spring Security
         Set<GrantedAuthority> authorities = user.getRoles().stream()
                 .map(role -> new SimpleGrantedAuthority(role.getName().name()))
                 .collect(Collectors.toSet());
 
-        // 3. Retorna o usuário com as permissões corretas
         return new DefaultOAuth2User(
-                authorities, // <-- Passa as roles dinâmicas aqui
+                authorities,
                 attrs,
                 "sub"
         );

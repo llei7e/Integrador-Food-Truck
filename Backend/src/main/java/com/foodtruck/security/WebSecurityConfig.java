@@ -75,6 +75,7 @@ public class WebSecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
 
                 .requestMatchers("/oauth2/**", "/login/**", "/login/oauth2/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                 .requestMatchers("/h2-console/**", "/api/test/all").permitAll()
                 .requestMatchers("/api/test/admin").hasRole("ADMIN")
