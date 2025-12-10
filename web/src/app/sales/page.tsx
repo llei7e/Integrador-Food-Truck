@@ -1,28 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getPedidos } from "../services/pedidos";
+import { useRouter } from "next/navigation";
+import { getPedidos, Pedido } from "../services/pedidos";
 
 import Filter from "../components/filter";
 import Header from "../components/header";
 import TableSales from "../components/tableSales";
 import Card from "../components/ui/card";
 
-export default function Trucks() {
+export default function Sales() {
+  const router = useRouter();
   const [vendasDoDia, setVendasDoDia] = useState(0);
   const [totalPedidos, setTotalPedidos] = useState(0);
   const [ticketMedio, setTicketMedio] = useState(0);
-  const [pedidosList, setPedidosList] = useState<any[]>([])
+  const [pedidosList, setPedidosList] = useState<Pedido[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
+        setLoading(true);
+        setError(null);
         const pedidos = await getPedidos();
-        setPedidosList(pedidos);
+        setPedidosList(pedidos); // Agora tipado corretamente
 
         const hoje = new Date().toISOString().split("T")[0];
 
-        const pedidosDoDia = pedidos.filter((p: any) =>
+        const pedidosDoDia = pedidos.filter((p: Pedido) => // Tipado aqui também
           p.dataCriacao.startsWith(hoje)
         );
 
@@ -30,20 +36,47 @@ export default function Trucks() {
 
         setTotalPedidos(pedidos.length);
 
-        const somaTotal = pedidos.reduce((acc: number, p: any) => acc + p.total, 0);
+        const somaTotal = pedidos.reduce((acc: number, p: Pedido) => acc + p.total, 0);
 
-        const ticket =
-          pedidos.length > 0 ? somaTotal / pedidos.length : 0;
+        const ticket = pedidos.length > 0 ? somaTotal / pedidos.length : 0;
 
         setTicketMedio(Number(ticket.toFixed(2)));
 
-      } catch (error) {
+      } catch (error: any) {
         console.error("Erro ao carregar pedidos:", error);
+        if (error.message === "NO_TOKEN" || error.message === "TOKEN_INVALID") {
+          console.error("Token inválido ou ausente – redirecionando para login");
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+        }
+        setError("Erro ao carregar pedidos. Tente novamente.");
+      } finally {
+        setLoading(false);
       }
     }
 
     load();
-  }, []);
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="mr-4 ml-4">
+        <Header />
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mr-4 ml-4">
+        <Header />
+        <p className="text-red-500">{error}</p>
+        <button onClick={() => window.location.reload()}>Tentar novamente</button>
+      </div>
+    );
+  }
 
   return (
     <div className="mr-4 ml-4">
@@ -76,7 +109,7 @@ export default function Trucks() {
           />
         </div>
 
-        <TableSales pedidosList={pedidosList} /> {/*  */}
+        <TableSales pedidosList={pedidosList} />
       </div>
     </div>
   );
