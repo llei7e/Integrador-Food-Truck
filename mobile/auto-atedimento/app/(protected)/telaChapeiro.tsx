@@ -31,6 +31,34 @@ const statusPriority: Record<string, number> = {
     'FINALIZADO': 3
 };
 
+// --- HELPER ATUALIZADO: Distingue Crédito e Débito ---
+const getPaymentInfo = (metodo: string) => {
+    const m = metodo ? metodo.toLowerCase() : '';
+
+    if (m.includes('pix')) {
+        return { icon: 'qr-code-outline', label: 'PIX', color: '#32BCAD' }; // Verde Água
+    }
+    
+    if (m.includes('dinheiro') || m.includes('cash')) {
+        return { icon: 'cash-outline', label: 'DINHEIRO', color: '#28a745' }; // Verde
+    }
+
+    // Lógica para cartões
+    if (m.includes('credito')) {
+        return { icon: 'card-outline', label: 'CRÉDITO', color: '#3F51B5' }; // Azul Escuro/Índigo
+    }
+    
+    if (m.includes('debito')) {
+        return { icon: 'card-outline', label: 'DÉBITO', color: '#03A9F4' }; // Azul Claro
+    }
+
+    if (m.includes('card') || m.includes('cart')) {
+        return { icon: 'card-outline', label: 'CARTÃO', color: '#2196F3' }; // Azul Padrão
+    }
+
+    return { icon: 'wallet-outline', label: metodo.toUpperCase(), color: '#666' };
+};
+
 export default function ChapeiroScreen() {
   const { signOut } = useAuth();
   const [pedidosProducao, setPedidosProducao] = useState<Pedido[]>([]);
@@ -40,22 +68,14 @@ export default function ChapeiroScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // 🔥 ANIMAÇÃO DO BOTÃO — piscar
+  // Animação piscar
   const blinkAnim = useState(new Animated.Value(1))[0];
 
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(blinkAnim, {
-          toValue: 0.2,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(blinkAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        })
+        Animated.timing(blinkAnim, { toValue: 0.2, duration: 500, useNativeDriver: true }),
+        Animated.timing(blinkAnim, { toValue: 1, duration: 500, useNativeDriver: true })
       ])
     ).start();
   }, []);
@@ -78,11 +98,12 @@ export default function ChapeiroScreen() {
             ['NA_FILA', 'PREPARANDO', 'FINALIZADO'].includes(p.status)
         );
 
+        // Ordenação: Status Priority > ID Maior (Mais novo)
         producao.sort((a, b) => {
             const priorityA = statusPriority[a.status] || 99;
             const priorityB = statusPriority[b.status] || 99;
             if (priorityA !== priorityB) return priorityA - priorityB;
-            return a.id - b.id;
+            return b.id - a.id; 
         });
 
         setPedidosProducao(prev => {
@@ -163,6 +184,8 @@ export default function ChapeiroScreen() {
         statusText = 'Finalizado';
     }
 
+    const payInfo = getPaymentInfo(pedido.metodoPagamento);
+
     return (
       <View key={pedido.id} style={[styles.card, isFinalizado && styles.cardDimmed]}>
         <View>
@@ -182,6 +205,14 @@ export default function ChapeiroScreen() {
         </View>
 
         <View>
+            {/* PAGAMENTO DETALHADO */}
+            <View style={styles.paymentContainer}>
+                <Ionicons name={payInfo.icon as any} size={22} color={payInfo.color} />
+                <Text style={[styles.paymentText, { color: payInfo.color }]}>
+                    {payInfo.label}
+                </Text>
+            </View>
+
             <View style={styles.totalContainer}>
                 <Text style={styles.totalLabel}>TOTAL:</Text>
                 <Text style={styles.totalValue}>R$ {pedido.total.toFixed(2).replace('.', ',')}</Text>
@@ -213,10 +244,8 @@ export default function ChapeiroScreen() {
         style={styles.container}
     >
       <View style={styles.header}>
-        
         <View style={styles.headerLeft}>
           <View style={styles.notificationArea}>
-
             {pagamentosPendentes.length > 0 && (
                 <Animated.View style={{ opacity: blinkAnim }}>
                   <TouchableOpacity 
@@ -321,7 +350,7 @@ const styles = StyleSheet.create({
       zIndex: 11,
   },
   mainTitle: {
-    color: '#F39D0A', 
+    color: 'white', 
     fontSize: 40,
     fontWeight: 'bold',
     letterSpacing: 2,
@@ -516,6 +545,20 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     fontWeight: 'bold',
     color: '#333',
+  },
+  paymentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginBottom: 5,
+    paddingVertical: 5,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+  },
+  paymentText: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   totalContainer: {
       flexDirection: 'row',

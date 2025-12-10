@@ -1,70 +1,81 @@
 import { useEffect } from "react";
-import { useRouter } from "expo-router";
+import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 
 export default function OAuthGoogle() {
   const router = useRouter();
   const { completeSocialLogin } = useAuth();
+  
+  // No Expo, usamos isso para pegar query params da URL (seja deep link ou web)
+  const params = useLocalSearchParams();
+  const rawPayload = params.payload as string;
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams(window.location.search);
-    const rawPayload = params.get("payload");
-
-    if (!rawPayload) {
-      console.error("Nenhum payload recebido");
-      router.replace("/login");
-      return;
-    }
-
-    try {
-      // 1️⃣ Decodifica o JSON vindo do backend
-      const decoded = decodeURIComponent(rawPayload);
-      const data = JSON.parse(decoded);
-
-      const token = data.access_token;
-      const email = data.user?.email;
-      const name = data.user?.name;
-
-      if (!token) {
-        console.error("Token ausente no payload");
-        router.replace("/login");
-        return;
+    async function processLogin() {
+      if (!rawPayload) {
+        // Se abriu a tela sem payload, algo deu errado, volta pro login
+        // (A não ser que o hook demore um pouco para carregar, mas geralmente é rápido)
+        return; 
       }
 
-      // 2️⃣ Salva o token e o usuário localmente (como o login normal)
-      completeSocialLogin(token, email).then(() => {
-        // (opcional) salva também o nome no localStorage
-        if (name) {
-          localStorage.setItem("user_name", name);
+      try {
+        // 1️⃣ Decodifica o JSON vindo do backend
+        // O backend enviou encodedURIComponent(json)
+        const jsonStr = decodeURIComponent(rawPayload);
+        const data = JSON.parse(jsonStr);
+
+        const token = data.access_token;
+        const userRaw = data.user; // Contém { id, name, email, cargo }
+
+        if (!token || !userRaw) {
+          console.error("Dados incompletos no payload do Google");
+          router.replace("/(auth)/login");
+          return;
         }
 
-        completeSocialLogin(token, email).then(async () => {
-            await new Promise((r) => setTimeout(r, 300)); // delay leve, opcional
-            router.replace("/home");
-            });
-            
-        // 3️⃣ Redireciona para a home
-        router.replace("/home");
-      });
-    } catch (err) {
-      console.error("Erro ao processar payload:", err);
-      router.replace("/login");
+        // 2️⃣ Salva no Contexto (AsyncStorage)
+        // Lembre-se: Atualizamos o completeSocialLogin para aceitar (token, userRaw)
+        await completeSocialLogin(token, userRaw);
+
+        // 3️⃣ Redirecionamento Inteligente por Cargo
+        // Como o Contexto demora uns milissegundos para atualizar o estado 'user',
+        // fazemos o redirecionamento manual aqui baseados no dado que acabamos de receber.
+        if (userRaw.cargo === 'CHAPEIRO') {
+            router.replace('/(protected)/telaChapeiro');
+        } else {
+            // USUARIO ou ADMIN
+            router.replace('/(protected)/(tabs)/home');
+        }
+
+      } catch (err) {
+        console.error("Erro ao processar login Google:", err);
+        router.replace("/(auth)/login");
+      }
     }
-  }, []);
+
+    processLogin();
+  }, [rawPayload]);
 
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "100vh",
-      fontFamily: "sans-serif"
-    }}>
-      <h2>Concluindo login com Google...</h2>
-      <p>Aguarde enquanto finalizamos seu acesso 🔄</p>
-    </div>
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color="#F39D0A" />
+      <Text style={styles.text}>Finalizando acesso...</Text>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#7E0000', // Mantendo a identidade visual
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20
+  },
+  text: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold'
+  }
+});

@@ -6,7 +6,7 @@ import { BASE_URL } from "../lib/api";
 import { ApiError } from "../lib/api";
 import { getAuth, saveAuth, clearAuth } from "../lib/storage";
 
-// --- 1. Definição do Usuário ---
+// Define o tipo do usuário e cargos
 type User = { 
   id?: string; 
   name?: string; 
@@ -14,16 +14,13 @@ type User = {
   cargo: 'CHAPEIRO' | 'USUARIO' | 'ADMIN' | string; 
 };
 
-// --- 2. Interface do Contexto ---
 type AuthCtx = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  // Agora aceita role opcional
   signUp: (name: string, email: string, password: string, role?: string) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  // Atualizado para ser mais flexível com os dados do usuário (userRaw)
   completeSocialLogin: (token: string, userRaw: any) => Promise<void>;
 };
 
@@ -33,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Helper para normalizar o cargo (garante maiúsculo e trata 'user')
+  // Helper para normalizar o cargo (garante maiúsculo e trata 'user' minúsculo)
   const normalizeCargo = (role?: string) => {
       if (!role) return "USUARIO";
       const upper = role.toUpperCase();
@@ -41,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return upper;
   };
 
-  // restaura sessão ao abrir o app
+  // Restaura sessão ao abrir o app
   useEffect(() => {
     (async () => {
       try {
@@ -57,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  // ---------- EMAIL/SENHA ----------
+  // ---------- LOGIN (EMAIL + SENHA) ----------
   async function signIn(email: string, password: string) {
     const res = await fetch(`${BASE_URL}/api/auth/login`, {
       method: "POST",
@@ -88,12 +85,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);
   }
 
-  // signUp com role opcional (padrão "user")
-  async function signUp(name: string, email: string, password: string, role: string = "user") {
+  // ---------- CADASTRO ----------
+  // role é opcional, padrão "USUARIO"
+  async function signUp(name: string, email: string, password: string, role: string = "USUARIO") {
     const res = await fetch(`${BASE_URL}/api/auth/register`, {
       method: "POST",
       headers: { Accept: "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, role }), // Envia 'role' ou 'cargo' dependendo do seu DTO de registro
+      // Envia a chave 'cargo' que o DTO do backend espera
+      body: JSON.stringify({ 
+          name, 
+          email, 
+          password, 
+          cargo: role 
+      }), 
     });
 
     let data: any = null; try { data = await res.json(); } catch {}
@@ -107,10 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }
 
-  // ---------- GOOGLE ----------
-  // Recebe userRaw que pode conter { email, name, cargo, id }
+  // ---------- GOOGLE (Processamento) ----------
   async function completeSocialLogin(token: string, userRaw: any) {
-    // Garante que userRaw seja um objeto
     const data = (typeof userRaw === 'object') ? userRaw : { email: userRaw };
     
     const rawRole = data?.cargo || data?.role;
@@ -127,53 +129,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);                      
   }
 
+  // ---------- GOOGLE (Início do Fluxo) ----------
   async function signInWithGoogle() {
-    const redirectUri =
-      Platform.OS === "web"
-        ? `${window.location.origin}/oauth-google`
-        : Linking.createURL("/oauth-google");
+    // 1. Define a URL de retorno para o App/Web
+    const redirectUri = Linking.createURL("/oauth-google");
+    
+    // Fallback para Web Localhost se necessário (ajuste conforme seu ambiente)
+    const finalRedirect = Platform.OS === 'web' 
+        ? "http://localhost:8081/oauth-google" 
+        : redirectUri;
 
-    const authUrl = `${BASE_URL}/auth/google/login?redirect=${encodeURIComponent(redirectUri)}`;
+    // 2. Chama o endpoint do Spring Security para OAuth2
+    // IMPORTANTE: NÃO chame /api/auth/google aqui (isso seria POST).
+    // Chame o endpoint de autorização GET padrão do Spring.
+    const authUrl = `${BASE_URL}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(finalRedirect)}`;
 
     if (Platform.OS === "web") {
       window.location.href = authUrl;
       return;
     }
 
-    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+    // 3. Abre o navegador
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, finalRedirect);
 
+    // 4. Processa o retorno
     if (result.type === "success" && result.url) {
       const parsed = Linking.parse(result.url);
       const qp = parsed.queryParams || {};
 
-      // 1. Tenta ler o payload JSON enviado pelo backend novo
+      // Tenta ler o payload JSON que o SuccessHandler enviou
       if (qp.payload) {
           try {
               const jsonStr = decodeURIComponent(qp.payload as string);
               const data = JSON.parse(jsonStr);
               const token = data.access_token;
-              const userRaw = data.user; // { id, email, cargo: "CHAPEIRO", ... }
+              const userRaw = data.user; 
 
               if (token && userRaw) {
                   await completeSocialLogin(token, userRaw);
                   return;
               }
           } catch (e) {
-              console.error("Erro no payload Google:", e);
+              console.error("Erro no parse do payload Google:", e);
           }
       }
 
-      // 2. Fallback para o método antigo (se não houver payload)
+      // Fallback antigo (caso o payload falhe)
       let token = (qp.access_token || qp.token) as string | undefined;
       let email = (qp.email as string | undefined) ?? null;
 
       if (!token) throw new Error("Token ausente no retorno do Google.");
-      
-      // Passa um objeto básico se só tivermos token e email
       await completeSocialLogin(token, { email });
 
     } else {
-      throw new Error("Login com Google cancelado.");
+      // throw new Error("Login com Google cancelado."); // Opcional lançar erro
     }
   }
 
