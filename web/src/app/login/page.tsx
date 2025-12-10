@@ -52,9 +52,6 @@ export default function Login() {
               style={{ width: 'auto', height: 'auto' }}
             />
           </div>
-
-          <GoogleButton />
-
           <SelectButton
             colorButton1="bg-[#E7E5E5]"
             colorButton2="bg-[#EA2626]"
