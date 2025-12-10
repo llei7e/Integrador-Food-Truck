@@ -1,7 +1,14 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 type AuthResponse = {
-  token: string;
+  access_token: string;
+  token_type: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    cargo: string;
+  };
 };
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
@@ -17,11 +24,23 @@ export async function login(email: string, password: string): Promise<AuthRespon
     throw new Error("Email ou senha inválidos");
   }
 
-  const data = await response.json();
+  const data: AuthResponse = await response.json();
+
+  if (data.user.cargo !== "ADMIN") {
+    throw new Error("Acesso negado: Apenas usuários ADMIN podem fazer login.");
+  }
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("token", data.access_token);
+    console.log("Token salvo no localStorage:", data.access_token.substring(0, 20) + "...");
+
+    const savedToken = localStorage.getItem("token");
+    console.log("Confirmação: Token lido após salvar:", savedToken ? savedToken.substring(0, 20) + "..." : "NULL!");
+  }
+
   return data;
 }
 
-// 👇 AGORA RECEBE name TAMBÉM
 export async function register(
   name: string,
   email: string,
@@ -32,11 +51,10 @@ export async function register(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ name, email, password }), // <<--- IMPORTANTÍSSIMO
+    body: JSON.stringify({ name, email, password }),
   });
 
   if (!response.ok) {
-    // você pode ler a mensagem do back aqui se quiser
     throw new Error("Erro ao registrar usuário.");
   }
 }
