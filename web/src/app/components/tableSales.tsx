@@ -30,7 +30,6 @@ export default function TableSales({ pedidosList, selectedTruckId }: TableSalesP
     ? pedidosList.filter((pedido) => pedido.truckId.toString() === selectedTruckId)
     : pedidosList;
 
-  // Função helper para formatar dataCriacao para "DD/MM/YYYY - HH:MM"
   const formatDataHora = (dataCriacao: string): string => {
     const date = new Date(dataCriacao);
     const dia = date.getDate().toString().padStart(2, '0');
@@ -41,7 +40,6 @@ export default function TableSales({ pedidosList, selectedTruckId }: TableSalesP
     return `${dia}/${mes}/${ano} - ${hora}:${minuto}`;
   };
 
-  // Função helper para formatar itens como string (ex: "1x Veggie Burger")
   const formatItens = (itens: Pedido['itens']): string => {
     return itens.map((item) => `${item.quantidade}x ${item.nomeProduto}`).join(', ');
   };
@@ -60,10 +58,10 @@ export default function TableSales({ pedidosList, selectedTruckId }: TableSalesP
         <thead className="text-xs text-white uppercase bg-gray-50 dark:bg-red-900">
           <tr>
             <th scope="col" className="px-6 py-3 text-center">ID</th>
-            <th scope="col" className="px-6 py-3 text-center">Data/Hora</th>
+            <th scope="col" className="px-6 py-3 text-center w-50">Data/Hora</th>
             <th scope="col" className="px-6 py-3 text-center">Cliente</th>
             <th scope="col" className="px-6 py-3 text-center">Itens</th>
-            <th scope="col" className="px-6 py-3 text-center">Valor</th>
+            <th scope="col" className="px-6 py-3 text-center w-40">Valor</th>
             <th scope="col" className="px-6 py-3 text-center">Pagamento</th>
             <th scope="col" className="px-6 py-3 text-center">Status</th>
           </tr>
@@ -74,12 +72,12 @@ export default function TableSales({ pedidosList, selectedTruckId }: TableSalesP
             <tr key={pedido.id} className="bg-white border-b border-gray-200 text-black">
               <td className="px-6 py-4 text-center">#{pedido.id}</td>
               <td className="px-6 py-4 text-center">{formatDataHora(pedido.dataCriacao)}</td>
-              <td className="px-6 py-4 text-center">N/A</td> {/*  */}
+              <td className="px-6 py-4 text-center">N/A</td>
               <td className="px-6 py-4 text-start">{formatItens(pedido.itens)}</td>
               <td className="px-6 py-4 text-center">R$ {pedido.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
               <td className="px-6 py-4 text-center">{pedido.metodoPagamento}</td>
               <td className="px-6 py-4 flex items-center justify-center">
-                <Status status={pedido.status} /> {/*   */}
+                <Status status={pedido.status} />
               </td>
             </tr>
           ))}
