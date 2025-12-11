@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import React from 'react';
 
@@ -16,22 +16,35 @@ const mapContainerStyle = {
 
 const center = { lat: -23.55052, lng: -46.633308 }; // São Paulo default
 
-// Função helper para mock coords baseadas em localizacao (em prod, use Google Geocoding API)
 const getCoordsFromLocalizacao = (localizacao: string): { lat: number; lng: number } => {
-  // Exemplo simples: mapeie strings para coords fixas (ajuste conforme seus dados reais)
   if (localizacao.includes("Cidade X")) return { lat: -23.55052, lng: -46.633308 };
-  return center; // Default
+  return center;
 };
 
 export default function MapView({ selectedTruckId, trucksList }: MapViewProps) {
   const [showMap, setShowMap] = useState(false);
+  if (!trucksList || !Array.isArray(trucksList)) {
+    return (
+      <div
+        style={{
+          height: "510px",
+          width: "400px",
+          borderRadius: "30px",
+          backgroundColor: "#d1d5db",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <p>Carregando trucks...</p> {/*  */}
+      </div>
+    );
+  }
 
-  // Filtra trucks para mostrar (todos ou só selecionado)
   const filteredTrucks = selectedTruckId 
     ? trucksList.filter((truck) => truck.id.toString() === selectedTruckId)
     : trucksList;
 
-  // Center no selecionado se houver
   const mapCenter = filteredTrucks.length > 0 
     ? getCoordsFromLocalizacao(filteredTrucks[0].localizacao)
     : center;
@@ -71,7 +84,7 @@ export default function MapView({ selectedTruckId, trucksList }: MapViewProps) {
             center={mapCenter}
             zoom={13}
             options={{
-              styles: [], // Adicione estilos custom se quiser
+              styles: [],
             }}
           >
             {filteredTrucks.map((truck) => {
@@ -81,7 +94,7 @@ export default function MapView({ selectedTruckId, trucksList }: MapViewProps) {
                   key={truck.id}
                   position={position}
                   title={`Truck ${truck.id} - ${truck.localizacao}`}
-                  icon={truck.ativo ? undefined : { url: "/inactive-marker.png" }} // Ícone custom para inativo (adicione imagem)
+                  icon={truck.ativo ? undefined : { url: "/inactive-marker.png" }}
                 />
               );
             })}
