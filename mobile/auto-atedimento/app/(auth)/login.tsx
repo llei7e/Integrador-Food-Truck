@@ -15,7 +15,6 @@ import { useAuth } from '../../context/AuthContext';
 import { RFPercentage } from 'react-native-responsive-fontsize';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
 
-// --- LÓGICA DE VALIDAÇÃO ---
 const isEmailValid = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -26,7 +25,6 @@ interface RegistrationErrors {
     email?: string;
     password?: string;
 }
-// --- FIM DA LÓGICA DE VALIDAÇÃO ---
 
 export default function Login() {
     const [activeTab, setActiveTab] = useState<'cadastro' | 'login'>('login');
@@ -41,20 +39,18 @@ export default function Login() {
 
     const { signIn, signUp, user, loading, signInWithGoogle } = useAuth();
 
-    // --- REDIRECIONAMENTO INTELIGENTE ---
+    // Redirecionamento
     useEffect(() => {
         if (!loading && user) {
-            // Verifica o cargo para decidir a rota inicial
             if (user.cargo === 'CHAPEIRO') {
                 router.replace('/(protected)/telaChapeiro');
             } else {
-                // USUARIO ou qualquer outro vai pra Home (Cardápio)
                 router.replace('/(protected)/(tabs)/home');
             }
         }
     }, [user, loading]);
 
-    // Validação do formulário de cadastro
+    // Validação
     useEffect(() => {
         if (activeTab === 'cadastro') {
             const newErrors: RegistrationErrors = {};
@@ -76,72 +72,59 @@ export default function Login() {
         }
     }, [nome, email, password, activeTab]);
 
-    const handleEmailChange = (text: string) => {
-        setEmail(text);
-        if (errorMessage) setErrorMessage(null);
-    };
-    const handlePasswordChange = (text: string) => {
-        setPassword(text);
-        if (errorMessage) setErrorMessage(null);
-    };
+    const handleEmailChange = (text: string) => { setEmail(text); if (errorMessage) setErrorMessage(null); };
+    const handlePasswordChange = (text: string) => { setPassword(text); if (errorMessage) setErrorMessage(null); };
     const handleNomeChange = (text: string) => setNome(text);
 
-    // --- Handler para Login com Email/Senha ---
+    // Login
     const handleLogin = async () => {
         const trimmedEmail = email.trim();
         const trimmedPassword = password.trim();
 
-        if (!trimmedEmail || !trimmedPassword) {
-            setErrorMessage('Preencha e-mail e senha.');
-            return;
-        }
-        if (!isEmailValid(trimmedEmail)) {
-            setErrorMessage('Por favor, insira um e-mail válido.');
-            return;
-        }
-        if (trimmedPassword.length < 3) {
-            setErrorMessage('A senha deve ter no mínimo 3 caracteres.');
+        if (!trimmedEmail || !trimmedPassword || !isEmailValid(trimmedEmail) || trimmedPassword.length < 3) {
+            setErrorMessage('Verifique seus dados.');
             return;
         }
 
         setSubmitting(true);
         try {
             await signIn(trimmedEmail.toLowerCase(), trimmedPassword);
-            // O useEffect cuidará do redirecionamento
         } catch (e: any) {
             if (e?.status === 403) setErrorMessage('E-mail ou senha inválidos.');
-            else setErrorMessage(e?.message ?? 'Falha no login. Tente novamente.');
+            else setErrorMessage(e?.message ?? 'Falha no login.');
         } finally {
             setSubmitting(false);
         }
     };
 
-    // --- Handler para Registro (Cadastro) ---
+    // Cadastro
     const handleRegister = async () => {
         if (!isRegisterFormValid) return;
         setSubmitting(true);
         try {
-            await signUp(nome.trim(), email.trim().toLowerCase(), password);
-            // O useEffect cuidará do redirecionamento
+            // --- AQUI: ENVIANDO O CARGO USUARIO ---
+            // Como só existe a opção USUARIO disponível para cadastro público, fixamos aqui.
+            // Se você quisesse um select, seria uma variável de estado.
+            const defaultRole = "USUARIO"; 
+            
+            await signUp(nome.trim(), email.trim().toLowerCase(), password, defaultRole);
         } catch (e: any) {
             if (e?.status === 409) setErrorMessage('Este e-mail já está cadastrado.');
-            else setErrorMessage(e?.message ?? 'Falha no cadastro. Tente novamente.');
+            else setErrorMessage(e?.message ?? 'Falha no cadastro.');
         } finally {
             setSubmitting(false);
         }
     };
 
-    // --- Handler para Login com Google ---
+    // Google
     const handleGoogleLogin = async () => {
         if (submitting) return; 
         setSubmitting(true);
         setErrorMessage(null);
-
         try {
             await signInWithGoogle();
-            // O useEffect cuidará do redirecionamento
         } catch (e: any) {
-            setErrorMessage(e?.message ?? 'Falha ao fazer login com Google.');
+            setErrorMessage(e?.message ?? 'Login Google falhou.');
             setSubmitting(false); 
         } 
     };
@@ -154,224 +137,108 @@ export default function Login() {
         );
     }
 
-    if (user) return null; // Já logado, o useEffect vai redirecionar
+    if (user) return null;
 
     return (
         <>
             <Stack.Screen options={{ headerShown: false }} />
-            <LinearGradient
-                colors={['#7E0000', '#520000']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 0 }}
-                style={styles.containerFull}
-            >
+            <LinearGradient colors={['#7E0000', '#520000']} style={styles.containerFull}>
                 <View style={styles.higher}>
                     <View style={styles.headerTexts}>
                         <Text style={styles.headerText}>Seja Bem Vindo!</Text>
-                        <Text style={styles.headerText}>
-                            {activeTab === 'login' ? 'Faça o Login' : 'Cadastre-se'}
-                        </Text>
+                        <Text style={styles.headerText}>{activeTab === 'login' ? 'Faça o Login' : 'Cadastre-se'}</Text>
                     </View>
-                    <Image
-                        source={require('../../assets/images/Logo.png')}
-                        style={styles.logo}
-                        resizeMode="contain"
-                    />
+                    <Image source={require('../../assets/images/Logo.png')} style={styles.logo} resizeMode="contain" />
                 </View>
 
                 <View style={styles.lower}>
                     <View style={styles.LoginRegister}>
-                        <TouchableOpacity
-                            style={[
-                                styles.tabButton,
-                                activeTab === 'login' ? styles.tabActive : styles.tabInactiveLeft,
-                            ]}
-                            onPress={() => {
-                                setActiveTab('login');
-                                setErrorMessage(null);
-                            }}
-                        >
-                            <Text style={[styles.tabText, activeTab === 'login' && styles.tabTextActive]}>
-                                Entrar
-                            </Text>
+                        <TouchableOpacity style={[styles.tabButton, activeTab === 'login' ? styles.tabActive : styles.tabInactiveLeft]} onPress={() => { setActiveTab('login'); setErrorMessage(null); }}>
+                            <Text style={[styles.tabText, activeTab === 'login' && styles.tabTextActive]}>Entrar</Text>
                         </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[
-                                styles.tabButton,
-                                activeTab === 'cadastro' ? styles.tabActive : styles.tabInactiveRight,
-                            ]}
-                            onPress={() => {
-                                setActiveTab('cadastro');
-                                setErrorMessage(null);
-                            }}
-                        >
-                            <Text style={[styles.tabText, activeTab === 'cadastro' && styles.tabTextActive]}>
-                                Cadastrar
-                            </Text>
+                        <TouchableOpacity style={[styles.tabButton, activeTab === 'cadastro' ? styles.tabActive : styles.tabInactiveRight]} onPress={() => { setActiveTab('cadastro'); setErrorMessage(null); }}>
+                            <Text style={[styles.tabText, activeTab === 'cadastro' && styles.tabTextActive]}>Cadastrar</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {/* LOGIN */}
+                    {/* LOGIN FORM */}
                     {activeTab === 'login' && (
                         <View style={styles.formContainer}>
                             <View style={styles.inputs}>
                                 <View style={styles.inputContainer}>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Digite seu e-mail"
-                                        placeholderTextColor="#999"
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        value={email}
-                                        onChangeText={handleEmailChange}
-                                    />
-                                    <Ionicons
-                                        name="mail-outline"
-                                        size={RFPercentage(4)}
-                                        color="#555"
-                                        style={styles.icon}
-                                    />
+                                    <TextInput style={styles.input} placeholder="Digite seu e-mail" placeholderTextColor="#999" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={handleEmailChange} />
+                                    <Ionicons name="mail-outline" size={RFPercentage(4)} color="#555" style={styles.icon} />
                                 </View>
-
                                 <View style={styles.inputContainer}>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Digite sua senha"
-                                        placeholderTextColor="#999"
-                                        secureTextEntry={!showPassword}
-                                        value={password}
-                                        onChangeText={handlePasswordChange}
-                                    />
+                                    <TextInput style={styles.input} placeholder="Digite sua senha" placeholderTextColor="#999" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
                                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                        <Ionicons
-                                            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                                            size={RFPercentage(4)}
-                                            color="#A11613"
-                                            style={styles.icon}
-                                        />
+                                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={RFPercentage(4)} color="#A11613" style={styles.icon} />
                                     </TouchableOpacity>
                                 </View>
                             </View>
-
                             <View style={styles.errorContainer}>
                                 {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
                             </View>
-
                             <View style={styles.buttonsContainer}>
-                                <TouchableOpacity
-                                    style={[styles.submitButton, { opacity: submitting ? 0.7 : 1 }]}
-                                    onPress={handleLogin}
-                                    disabled={submitting}
-                                >
-                                    <Text style={styles.submitText}>
-                                        {submitting ? 'Entrando...' : 'Entrar'}
-                                    </Text>
+                                <TouchableOpacity style={[styles.submitButton, { opacity: submitting ? 0.7 : 1 }]} onPress={handleLogin} disabled={submitting}>
+                                    <Text style={styles.submitText}>{submitting ? 'Entrando...' : 'Entrar'}</Text>
                                 </TouchableOpacity>
-                                
-                                <TouchableOpacity
-                                    style={[{ opacity: submitting ? 0.7 : 1 }]}
-                                    onPress={handleGoogleLogin}
-                                    disabled={submitting}
-                                >
-                                    <Image
-                                        source={require('../../assets/images/logoGoogle.png')}
-                                        style={styles.logoGoogle}
-                                        resizeMode="contain"
-                                    />
+                                <TouchableOpacity style={[{ opacity: submitting ? 0.7 : 1 }]} onPress={handleGoogleLogin} disabled={submitting}>
+                                    <Image source={require('../../assets/images/logoGoogle.png')} style={styles.logoGoogle} resizeMode="contain" />
                                 </TouchableOpacity>
                             </View>
                         </View>
                     )}
 
-                    {/* CADASTRO */}
+                    {/* CADASTRO FORM */}
                     {activeTab === 'cadastro' && (
                         <View style={styles.formContainer}>
-                            {/* Nome */}
                             <View style={styles.fieldContainer}>
                                 <View style={styles.inputContainer}>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Nome"
-                                        placeholderTextColor="#999"
-                                        value={nome}
-                                        onChangeText={handleNomeChange}
-                                    />
-                                    <Ionicons
-                                        name="person-outline"
-                                        size={RFPercentage(4)}
-                                        color="#555"
-                                        style={styles.icon}
-                                    />
+                                    <TextInput style={styles.input} placeholder="Nome" placeholderTextColor="#999" value={nome} onChangeText={handleNomeChange} />
+                                    <Ionicons name="person-outline" size={RFPercentage(4)} color="#555" style={styles.icon} />
                                 </View>
                                 <View style={styles.realTimeErrorContainer}>
-                                    {registrationErrors.nome && (
-                                        <Text style={styles.realTimeErrorText}>{registrationErrors.nome}</Text>
-                                    )}
+                                    {registrationErrors.nome && <Text style={styles.realTimeErrorText}>{registrationErrors.nome}</Text>}
                                 </View>
                             </View>
 
-                            {/* E-mail */}
                             <View style={styles.fieldContainer}>
                                 <View style={styles.inputContainer}>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Digite seu e-mail"
-                                        placeholderTextColor="#999"
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        value={email}
-                                        onChangeText={handleEmailChange}
-                                    />
-                                    <Ionicons
-                                        name="mail-outline"
-                                        size={RFPercentage(4)}
-                                        color="#555"
-                                        style={styles.icon}
-                                    />
+                                    <TextInput style={styles.input} placeholder="Digite seu e-mail" placeholderTextColor="#999" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={handleEmailChange} />
+                                    <Ionicons name="mail-outline" size={RFPercentage(4)} color="#555" style={styles.icon} />
                                 </View>
                                 <View style={styles.realTimeErrorContainer}>
-                                    {registrationErrors.email && (
-                                        <Text style={styles.realTimeErrorText}>{registrationErrors.email}</Text>
-                                    )}
+                                    {registrationErrors.email && <Text style={styles.realTimeErrorText}>{registrationErrors.email}</Text>}
                                 </View>
                             </View>
 
-                            {/* Senha */}
                             <View style={styles.fieldContainer}>
                                 <View style={styles.inputContainer}>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Digite sua senha"
-                                        placeholderTextColor="#999"
-                                        secureTextEntry={!showPassword}
-                                        value={password}
-                                        onChangeText={handlePasswordChange}
-                                    />
+                                    <TextInput style={styles.input} placeholder="Digite sua senha" placeholderTextColor="#999" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
                                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                        <Ionicons
-                                            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                                            size={RFPercentage(4)}
-                                            color="#A11613"
-                                            style={styles.icon}
-                                        />
+                                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={RFPercentage(4)} color="#A11613" style={styles.icon} />
                                     </TouchableOpacity>
                                 </View>
                                 <View style={styles.realTimeErrorContainer}>
-                                    {registrationErrors.password && (
-                                        <Text style={styles.realTimeErrorText}>{registrationErrors.password}</Text>
-                                    )}
+                                    {registrationErrors.password && <Text style={styles.realTimeErrorText}>{registrationErrors.password}</Text>}
                                 </View>
                             </View>
 
-                            <TouchableOpacity
-                                style={[styles.submitButton, { opacity: !isRegisterFormValid || submitting ? 0.6 : 1 }]}
-                                onPress={handleRegister}
-                                disabled={!isRegisterFormValid || submitting}
-                            >
-                                <Text style={styles.submitText}>
-                                    {submitting ? 'Cadastrando...' : 'Cadastrar'}
-                                </Text>
+                            {/* Campo de Cargo (Visualmente apenas informativo, já que só tem 1 opção) */}
+                            <View style={styles.fieldContainer}>
+                                <View style={[styles.inputContainer, { backgroundColor: '#f0f0f0', borderBottomColor: '#aaa' }]}>
+                                    <TextInput 
+                                        style={[styles.input, { color: '#666' }]} 
+                                        value="Cargo: USUÁRIO" 
+                                        editable={false} 
+                                    />
+                                    <Ionicons name="briefcase-outline" size={RFPercentage(4)} color="#999" style={styles.icon} />
+                                </View>
+                            </View>
+
+                            <TouchableOpacity style={[styles.submitButton, { opacity: !isRegisterFormValid || submitting ? 0.6 : 1 }]} onPress={handleRegister} disabled={!isRegisterFormValid || submitting}>
+                                <Text style={styles.submitText}>{submitting ? 'Cadastrando...' : 'Cadastrar'}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -447,9 +314,10 @@ const styles = StyleSheet.create({
     },
     icon: { marginHorizontal: wp(1.5) },
     submitButton: {
+        marginTop: RFPercentage(3),
+        width: RFPercentage(28),
         backgroundColor: '#7E0000',
         paddingVertical: RFPercentage(2),
-        paddingHorizontal: wp(10),
         borderRadius: RFPercentage(6),
         alignItems: 'center',
         shadowColor: '#000',

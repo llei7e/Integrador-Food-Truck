@@ -1,17 +1,55 @@
 import React, { useEffect } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useSegments } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function ProtectedLayout() {
   const { user, loading } = useAuth();
+  const segments = useSegments(); // Hook para saber a rota atual
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/(auth)/login');
-    }
-  }, [loading, user]);
+    // 1. Aguarda carregamento
+    if (loading) return;
 
+    // 2. Se não tem usuário, manda pro login
+    if (!user) {
+      router.replace('/(auth)/login');
+      return;
+    }
+
+    // 3. Lógica de Proteção de Rotas por Cargo
+    // 'segments' retorna um array tipo ['(protected)', 'telaChapeiro']
+    const inProtectedGroup = segments[0] === '(protected)';
+    const currentRoute = segments[1]; // A tela específica que ele está tentando acessar
+
+    // Se ainda não navegou para uma rota específica dentro de protected, deixa o fluxo seguir
+    if (!inProtectedGroup || !currentRoute) return;
+
+    if (user.cargo === 'CHAPEIRO') {
+      // Lista de telas permitidas para Chapeiro
+      const allowedRoutes = ['telaChapeiro', 'definicaoProdutos'];
+
+      // Se a rota atual NÃO está na lista permitida
+      if (!allowedRoutes.includes(currentRoute)) {
+        // Redireciona para a primeira tela do escopo dele
+        router.replace('/(protected)/telaChapeiro');
+      }
+    } 
+    else {
+      // Assume que é USUARIO (ou qualquer outro cargo não-admin/chapeiro)
+      // Lista de telas permitidas para Usuário
+      // Nota: '(tabs)' engloba a home. Adicione 'carrinho' se for uma rota fora das tabs.
+      const allowedRoutes = ['(tabs)', 'detalhesProduto', 'pagamento', 'agradecimento', 'carrinho'];
+
+      if (!allowedRoutes.includes(currentRoute)) {
+        // Redireciona para a primeira tela do escopo dele (Home)
+        router.replace('/(protected)/(tabs)/home');
+      }
+    }
+
+  }, [user, loading, segments]);
+
+  // Enquanto verifica a auth/cargo, mostra loading para não piscar tela errada
   if (loading || !user) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
@@ -20,32 +58,22 @@ export default function ProtectedLayout() {
     );
   }
 
-  // --- LÓGICA DE CARGOS ---
-  const isChapeiro = user.cargo === 'CHAPEIRO';
-
+  // Define todas as telas possíveis na Stack.
+  // O useEffect acima impede que o usuário veja o que não deve.
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      
-      {/* SE FOR CHAPEIRO: Apenas telas de trabalho */}
-      {isChapeiro ? (
-        <>
-          <Stack.Screen name="telaChapeiro" />
-          <Stack.Screen name="definicaoProdutos" />
-        </>
-      ) : (
-      /* SE FOR USUARIO COMUM: Apenas telas de cliente */
-        <>
-          <Stack.Screen name="(tabs)" />
-          {/* Telas que o cliente acessa (como modais) */}
-          <Stack.Screen 
-             name="detalhesProduto" 
-             options={{ presentation: 'modal' }} 
-          />
-           <Stack.Screen name="pagamento" />
-           <Stack.Screen name="agradecimento" />
-        </>
-      )}
+      {/* Telas do Usuário */}
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen 
+        name="detalhesProduto" 
+      />
+      <Stack.Screen name="carrinho" /> 
+      <Stack.Screen name="pagamento" />
+      <Stack.Screen name="agradecimento" />
 
+      {/* Telas do Chapeiro */}
+      <Stack.Screen name="telaChapeiro" />
+      <Stack.Screen name="definicaoProdutos" />
     </Stack>
   );
 }

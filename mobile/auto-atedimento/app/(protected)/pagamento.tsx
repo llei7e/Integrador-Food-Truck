@@ -14,7 +14,6 @@ export default function Pagamento() {
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Garante que o estado de loading e modal seja resetado ao re-focar na tela
   useFocusEffect(
     useCallback(() => {
       setIsSubmitting(false);
@@ -24,8 +23,8 @@ export default function Pagamento() {
 
   const getMethodStyle = (method: string) => method === selectedMethod ? [styles.method, styles.selected] : styles.method;
   const getTextStyle = (method: string) => method === selectedMethod ? styles.methodTextWhite : styles.methodText;
+  const getIconColor = (method: string) => method === selectedMethod ? 'white' : '#A11613';
 
-  // --- FUNÇÃO DE PAGAMENTO (AGORA ASSÍNCRONA) ---
   const handlePaymentSuccess = async () => {
     if (isSubmitting) return; 
     
@@ -36,15 +35,13 @@ export default function Pagamento() {
 
     setIsSubmitting(true);
 
-    // --- 1. LÓGICA DE STATUS DINÂMICO ---
     let statusInicial = "NA_FILA"; 
     if (selectedMethod === 'Dinheiro') {
-        statusInicial = "AGUARDANDO_PAGAMENTO"; // Entra no modo de notificação para o chapeiro
+        statusInicial = "AGUARDANDO_PAGAMENTO"; 
     }
-    // ----------------------------------------
 
     const pedidoDTO = {
-      status: statusInicial, // Status de acordo com o método de pagamento
+      status: statusInicial,
       truck_id: 1, 
       metodoPagamento: selectedMethod,
       itens: cartItems.map(item => ({
@@ -54,7 +51,6 @@ export default function Pagamento() {
     };
 
     try {
-      // 2. Enviar para o backend
       await api('/api/pedidos', {
         method: 'POST',
         auth: true, 
@@ -62,13 +58,10 @@ export default function Pagamento() {
         body: JSON.stringify(pedidoDTO)
       });
 
-      // 3. Se deu certo: Limpar o carrinho e navegar
       clearCart(); 
       router.replace('/agradecimento'); 
-      // isSubmitting será liberado ao unmount
 
     } catch (error: any) {
-      // 4. Se deu errado: Mostrar erro e resetar loading/modal
       console.error("Falha ao criar pedido:", error);
       Alert.alert(
         "Erro no Pedido",
@@ -84,7 +77,7 @@ export default function Pagamento() {
       return (
         <>
           <Text style={styles.modalTitle}>Registrando seu pedido...</Text>
-          <ActivityIndicator size={200} color="#201000ff" style={{ marginTop: 30 }} />
+          <ActivityIndicator size={100} color="#201000ff" style={{ marginTop: 30 }} />
           <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Aguarde...</Text>
         </>
       );
@@ -96,24 +89,24 @@ export default function Pagamento() {
           <>
             <Text style={styles.modalTitle}>Escaneie o QR Code</Text>
             <Image source={require('../../assets/images/codigo-qr.png')} style={styles.qrImage} />
-            <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Toque na tela quando o pagamento for confirmado</Text>
+            <Text style={styles.modalInstruction}>Toque na tela quando o pagamento for confirmado</Text>
           </>
         );
       case 'Cartão Crédito':
       case 'Cartão Débito':
         return (
           <>
-            <Text style={styles.modalTitle}>Aproxime ou insira seu cartão na maquininha ({selectedMethod})</Text>
+            <Text style={styles.modalTitle}>Aproxime ou insira seu cartão ({selectedMethod})</Text>
             <Image source={require('../../assets/images/pagamento.png')} style={styles.imgPopup} />
-            <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Toque na tela quando o pagamento for confirmado</Text>
+            <Text style={styles.modalInstruction}>Toque na tela quando o pagamento for confirmado</Text>
           </>
         );
       case 'Dinheiro':
         return (
           <>
             <Text style={styles.modalTitle}>Dirija-se ao caixa/chapeiro para pagar</Text>
-            <ActivityIndicator size={200} color="#201000ff" style={{ marginTop: 30 }} />
-            <Text style={{ fontSize: 20, textAlign: 'center', marginTop: 20 }}>Toque na tela para enviar o pedido</Text>
+            <ActivityIndicator size={100} color="#201000ff" style={{ marginTop: 30 }} />
+            <Text style={styles.modalInstruction}>Toque na tela para enviar o pedido</Text>
           </>
         );
       default:
@@ -127,31 +120,34 @@ export default function Pagamento() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back-circle-outline" size={70} color="white" />
+            <Ionicons name="chevron-back-circle-outline" size={60} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Pagamento</Text>
         </View>
 
-        <View style={styles.paymentContainer}>
-          <TouchableOpacity style={getMethodStyle('Pix')} onPress={() => setSelectedMethod('Pix')}>
-            <Ionicons name="qr-code" size={90} color={selectedMethod === 'Pix' ? 'white' : '#A11613'} />
-            <Text style={getTextStyle('Pix')}>Pix</Text>
-          </TouchableOpacity>
+        {/* CONTAINER DOS MÉTODOS */}
+        <View style={styles.centerContainer}>
+            <View style={styles.paymentContainer}>
+                <TouchableOpacity style={getMethodStyle('Pix')} onPress={() => setSelectedMethod('Pix')}>
+                    <Ionicons name="qr-code" size={60} color={getIconColor('Pix')} />
+                    <Text style={getTextStyle('Pix')}>Pix</Text>
+                </TouchableOpacity>
 
-          <TouchableOpacity style={getMethodStyle('Cartão Crédito')} onPress={() => setSelectedMethod('Cartão Crédito')}>
-            <Ionicons name="card" size={90} color={selectedMethod === 'Cartão Crédito' ? 'white' : '#A11613'} />
-            <Text style={getTextStyle('Cartão Crédito')}>Cartão Crédito</Text>
-          </TouchableOpacity>
+                <TouchableOpacity style={getMethodStyle('Cartão Crédito')} onPress={() => setSelectedMethod('Cartão Crédito')}>
+                    <Ionicons name="card" size={60} color={getIconColor('Cartão Crédito')} />
+                    <Text style={getTextStyle('Cartão Crédito')}>Crédito</Text>
+                </TouchableOpacity>
 
-          <TouchableOpacity style={getMethodStyle('Cartão Débito')} onPress={() => setSelectedMethod('Cartão Débito')}>
-            <Ionicons name="card-outline" size={90} color={selectedMethod === 'Cartão Débito' ? 'white' : '#A11613'} />
-            <Text style={getTextStyle('Cartão Débito')}>Cartão Débito</Text>
-          </TouchableOpacity>
+                <TouchableOpacity style={getMethodStyle('Cartão Débito')} onPress={() => setSelectedMethod('Cartão Débito')}>
+                    <Ionicons name="card-outline" size={60} color={getIconColor('Cartão Débito')} />
+                    <Text style={getTextStyle('Cartão Débito')}>Débito</Text>
+                </TouchableOpacity>
 
-          <TouchableOpacity style={getMethodStyle('Dinheiro')} onPress={() => setSelectedMethod('Dinheiro')}>
-            <Ionicons name="cash-outline" size={90} color={selectedMethod === 'Dinheiro' ? 'white' : '#A11613'} />
-            <Text style={getTextStyle('Dinheiro')}>Dinheiro</Text>
-          </TouchableOpacity>
+                <TouchableOpacity style={getMethodStyle('Dinheiro')} onPress={() => setSelectedMethod('Dinheiro')}>
+                    <Ionicons name="cash-outline" size={60} color={getIconColor('Dinheiro')} />
+                    <Text style={getTextStyle('Dinheiro')}>Dinheiro</Text>
+                </TouchableOpacity>
+            </View>
         </View>
 
         <View style={styles.footer}>
@@ -184,7 +180,6 @@ export default function Pagamento() {
   );
 }
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -196,55 +191,112 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: "20%",
+    height: "15%",
+    paddingTop: 20,
   },
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 60,
+    fontSize: RFPercentage(5),
     fontWeight: 'bold',
     color: 'white',
   },
   backButton: {
     position: 'absolute',
-    left: 30,
-    top: '30%',
-    transform: [{ translateY: -20 }],
+    left: 20,
     zIndex: 1,
+    paddingTop: 20,
+  },
+  
+  // --- ÁREA CENTRAL ---
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  paymentContainer: {
+    width: '70%', // --- AQUI: EXATAMENTE 70% DA TELA ---
+    backgroundColor: 'white',
+    borderRadius: 30,
+    padding: RFPercentage(5), // Padding moderado para não espremer os botões
+    
+    // Configuração do Grid (Flexbox)
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between', // Distribui entre os cantos
+    alignContent: 'center', // Centraliza verticalmente o bloco de botões
+    gap: RFPercentage(2), // Espaço entre linhas e colunas
+
+    // Sombra
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  method: {
+    width: '47%', // 47% + 47% + gap = 100% da largura disponível no container
+    aspectRatio: 1, // --- AQUI: FORÇA O FORMATO QUADRADO ---
+    borderWidth: 2,
+    borderColor: '#A11613',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 5,
+  },
+  selected: {
+    backgroundColor: '#A11613',
+  },
+  methodText: {
+    fontSize: RFPercentage(2.5),
+    color: '#A11613',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  methodTextWhite: {
+    fontSize: RFPercentage(2.5),
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  // --------------------
+
+  footer: {
+    alignItems: 'center',
+    width: '90%',
+    marginHorizontal: '5%',
+    marginBottom: 20,
   },
   totalRow: {
     flexDirection: 'row',
     width: '100%',
     justifyContent: 'space-between',
-    paddingHorizontal: 30,
-    paddingVertical: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    marginBottom: 10,
   },
   totalLabel: {
-    fontSize: 40,
+    fontSize: RFPercentage(3.5),
     fontWeight: '600',
-    lineHeight: 1,
   },
   totalValue: {
-    fontSize: 50,
+    fontSize: RFPercentage(4),
     fontWeight: '900',
+    color: '#201000ff',
   },
   payButton: {
     backgroundColor: '#A11613',
-    width: '95%',
-    marginTop: 40,
-    paddingVertical: 18,
-    borderRadius: 40,
+    width: '100%',
+    paddingVertical: 15,
+    borderRadius: 50,
     alignItems: 'center',
-    marginBottom: 40,
     shadowColor: '#000',
-    shadowOffset: {
-      width: -2,
-      height: 5,
-    },
-    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
@@ -253,101 +305,46 @@ const styles = StyleSheet.create({
   },
   payText: {
     color: '#fff',
-    fontSize: 30,
+    fontSize: RFPercentage(3),
     fontWeight: 'bold',
   },
-  paymentContainer: {
-    gap: RFPercentage(3),
-    marginHorizontal: '10%',
-    height: 600,
-    width: '80%',
-    borderRadius: 60,
-    backgroundColor: 'white',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingTop: 70,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: -1,
-      height: 3,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  method: {
-    width: 200,
-    height: 200,
-    borderWidth: 2,
-    borderColor: '#A11613',
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 20,
-  },
-  selected: {
-    backgroundColor: '#A11613',
-    width: 200,
-    height: 200,
-  },
-  methodText: {
-    fontSize: 20,
-    color: '#A11613',
-    fontWeight: 'bold',
-  },
-  methodTextWhite: {
-    fontSize: 26,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  footer: {
-    alignItems: 'center',
-    width: '80%',
-    marginHorizontal: '10%',
-  },
+  
+  // MODAL
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    width: '80%',
+    width: '85%',
     backgroundColor: 'white',
     borderRadius: 30,
     padding: 30,
     alignItems: 'center',
+    elevation: 10,
   },
   modalTitle: {
-    fontSize: 28,
+    fontSize: RFPercentage(3),
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
     color: '#A11613',
   },
+  modalInstruction: {
+    fontSize: RFPercentage(2.2), 
+    textAlign: 'center', 
+    marginTop: 20,
+    color: '#555'
+  },
   qrImage: {
-    width: 400,
-    height: 400,
-    resizeMode: 'contain',
-    marginBottom: 20,
-  },
-  closeButton: {
-    marginTop: 80,
-    paddingVertical: 15,
-    paddingHorizontal: 40,
-    backgroundColor: '#A11613',
-    borderRadius: 20,
-  },
-  closeText: {
-    color: 'white',
-    fontSize: 25,
-    fontWeight: 'bold',
-  },
-  imgPopup: {
     width: 250,
     height: 250,
+    resizeMode: 'contain',
+  },
+  imgPopup: {
+    width: 200,
+    height: 200,
     resizeMode: 'contain',
   },
 });
