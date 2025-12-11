@@ -1,10 +1,18 @@
 import { Platform } from "react-native";
 import { getToken } from "./storage";
 
-const WEB_OR_IOS = "http://localhost:8080";   // Web / iOS simulador
-const ANDROID_EMULATOR = "http://10.0.2.2:8080"; // Android emulador
-export const BASE_URL = Platform.OS === "android" ? ANDROID_EMULATOR : WEB_OR_IOS;
-// export const BASE_URL = "http://SEU-IP-LOCAL:8000";
+// --- CONFIGURAÇÃO DE REDE (AWS) ---
+// IP Público da sua instância EC2 na AWS
+const AWS_IP = "54.146.16.231"; 
+
+// Porta do servidor (Geralmente 8080 para Spring Boot, ou 80 se tiver proxy reverso)
+// Se você não configurou porta 80, mantenha 8080.
+const PORT = "8080"; 
+
+// Agora unificamos a URL base, pois o servidor é externo e acessível de qualquer lugar
+const API_URL = `http://${AWS_IP}:${PORT}`;
+
+export const BASE_URL = API_URL;
 
 export class ApiError extends Error {
   status: number; body?: any;
@@ -24,8 +32,13 @@ export async function api(path: string, opts: ApiOptions = {}) {
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
+  // Log para garantir que está batendo na AWS
+  console.log(`📡 AWS Request: ${BASE_URL}${path}`);
+
   const res = await fetch(`${BASE_URL}${path}`, { ...opts, headers, signal: controller.signal }).catch((e) => {
-    clearTimeout(timer); throw new ApiError(e?.message || "Falha de rede", 0);
+    clearTimeout(timer); 
+    console.error("Erro de conexão AWS:", e);
+    throw new ApiError(e?.message || "Falha de conexão com o servidor", 0);
   });
 
   clearTimeout(timer);
