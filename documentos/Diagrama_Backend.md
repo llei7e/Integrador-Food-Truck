@@ -1,5 +1,4 @@
 ```mermaid
-
 ---
 config:
   layout: elk
@@ -12,40 +11,46 @@ flowchart LR
         PWAApp["PWA - Autoatendimento e Visão do Chapeiro"]
   end
   
- subgraph BACKEND["Backend - Spring Boot API REST (ECS Fargate)"]
+ subgraph BACKEND["Backend - Spring Boot API REST (EC2)"]
         Controllers["Controllers - API REST"]
         Services["Services - Regras de Negócio"]
-        Repositories["Repositories - JPA"]
+        Repositories["Repositories"]
         Models["Models / Domain"]
         Security["Segurança - JWT e Roles"]
   end
 
  subgraph DATABASE["Banco de Dados - Amazon RDS (MySQL)"]
-        Tabelas["Usuários | Produtos | Pedidos | Itens | Estoque | Categorias | Roles"]
+        Tabelas["Usuários | Produtos | Pedidos | Itens | Estoque | Categorias | FoodTruck"]
   end
 
  subgraph INFRA["Infraestrutura AWS"]
-        S3["Amazon S3 (Armazenamento Estático)"]
-        LoadBalancer["Load Balancer"]
-        EC2["Instância EC2 (Proxy / Gateway)"]
-        ECS["Amazon ECS Cluster (Fargate)"]
-        RDS["Amazon RDS"]
-        CloudWatch["Amazon CloudWatch (Monitoramento)"]
+        Amplify["AWS Amplify (Hosting Frontend)"]
+        EC2Backend["Instância EC2 (Backend)"]
+        S3["Amazon S3 (Assets Estáticos)"]
+        RDS["Amazon RDS (MySQL)"]
+        CloudWatch["Amazon CloudWatch (Logs e Métricas)"]
   end
 
-    WebAdmin -- HTTPS/JSON --> LoadBalancer
-    PWAApp -- HTTPS/JSON --> LoadBalancer
-    LoadBalancer --> EC2
-    EC2 --> ECS
-    ECS --> BACKEND
-    BACKEND --> RDS & CloudWatch
+    %% Fluxos principais
+    WebAdmin --> Amplify
+    PWAApp --> Amplify
+
+    Amplify -- HTTPS/JSON --> EC2Backend
+    EC2Backend --> BACKEND
+
+    BACKEND --> RDS
+    BACKEND --> CloudWatch
     RDS --> DATABASE
-    S3 --> WebAdmin & PWAApp
+
+    S3 --> WebAdmin
+    S3 --> PWAApp
+
      BACKEND:::backend
      DATABASE:::db
+     INFRA:::infra
 
     classDef frontend fill:#e8f0fe,stroke:#1a73e8,stroke-width:1px,color:#000
     classDef backend fill:#fff3cd,stroke:#b59b00,stroke-width:1px,color:#000
-    classDef db fill:#d4edda,stroke:#155724,stroke-width:1px,color:#000
-    classDef infra fill:#f1f1f1,stroke:#5f6368,stroke-width:1px,color:#000
+    classDef db fill:#f1f1f1,stroke:#155724,stroke-width:1px,color:#000
+    classDef infra fill:#d4fdda,stroke:#5f6368,stroke-width:1px,color:#000
 ```
