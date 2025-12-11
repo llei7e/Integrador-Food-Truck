@@ -73,9 +73,10 @@ export default function Trucks() {
           setNumeroPedidos("Nenhum truck cadastrado");
           setStatusTruck("Nenhum truck cadastrado");
         }
-      } catch (error: any) {
+      } catch (error: unknown) { // 👈 Mudei de 'any' para 'unknown'
         console.error("Erro ao carregar dados:", error);
-        if (error.message === "NO_TOKEN" || error.message === "TOKEN_INVALID") {
+        const errMessage = error instanceof Error ? error.message : "Erro desconhecido";
+        if (errMessage === "NO_TOKEN" || errMessage === "TOKEN_INVALID") {
           console.error("Token inválido ou ausente – redirecionando para login");
           localStorage.removeItem('token');
           router.push('/');
