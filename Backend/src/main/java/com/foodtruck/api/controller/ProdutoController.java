@@ -54,7 +54,7 @@ public class ProdutoController {
   ) {}
 
 
-  @PatchMapping("/{id}/ativo")
+  @PatchMapping("/{id}/status")
   public ResponseEntity<Produto> atualizarAtivo(
         @PathVariable Long id,
         @RequestBody @Validated AtualizarAtivoDto dto

@@ -20,7 +20,7 @@ export default function tableIngredient() {
               Pão
             </th>
             <td className="px-6 py-4 flex items-center justify-center">
-              <Status text="Suficiente"/>
+              <Status status="Suficiente" />
             </td>
           </tr>
           <tr className="bg-white border-b border-gray-200">
@@ -28,7 +28,7 @@ export default function tableIngredient() {
               Hamburguer
             </th>
             <td className="px-6 py-4 flex items-center justify-center">
-              <Status text="Alerta"/>
+              <Status status="Alerta" />
             </td>
           </tr>
           <tr className="bg-white border-b border-gray-200">
@@ -36,7 +36,7 @@ export default function tableIngredient() {
               Tomate
             </th>
             <td className="px-6 py-4 flex items-center justify-center">
-              <Status text="Em falta"/>
+              <Status status="Em falta" />
             </td>
           </tr>
         </tbody>
