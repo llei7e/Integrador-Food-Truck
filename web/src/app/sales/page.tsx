@@ -20,43 +20,44 @@ export default function Sales() {
 
   useEffect(() => {
     async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-        const pedidos = await getPedidos();
-        setPedidosList(pedidos); // Agora tipado corretamente
+    try {
+      setLoading(true);
+      setError(null);
+      const pedidos = await getPedidos();
+      setPedidosList(pedidos); // Agora tipado corretamente
 
-        const hoje = new Date().toISOString().split("T")[0];
+      const hoje = new Date().toISOString().split("T")[0];
 
-        const pedidosDoDia = pedidos.filter((p: Pedido) => // Tipado aqui também
-          p.dataCriacao.startsWith(hoje)
-        );
+      const pedidosDoDia = pedidos.filter((p: Pedido) => // Tipado aqui também
+        p.dataCriacao.startsWith(hoje)
+      );
 
-        setVendasDoDia(pedidosDoDia.length);
+      setVendasDoDia(pedidosDoDia.length);
 
-        setTotalPedidos(pedidos.length);
+      setTotalPedidos(pedidos.length);
 
-        const somaTotal = pedidos.reduce((acc: number, p: Pedido) => acc + p.total, 0);
+      const somaTotal = pedidos.reduce((acc: number, p: Pedido) => acc + p.total, 0);
 
-        const ticket = pedidos.length > 0 ? somaTotal / pedidos.length : 0;
+      const ticket = pedidos.length > 0 ? somaTotal / pedidos.length : 0;
 
-        setTicketMedio(Number(ticket.toFixed(2)));
+      setTicketMedio(Number(ticket.toFixed(2)));
 
-      } catch (error: any) {
-        console.error("Erro ao carregar pedidos:", error);
-        if (error.message === "NO_TOKEN" || error.message === "TOKEN_INVALID") {
-          console.error("Token inválido ou ausente – redirecionando para login");
-          localStorage.removeItem('token');
-          router.push('/login');
-          return;
-        }
-        setError("Erro ao carregar pedidos. Tente novamente.");
-      } finally {
-        setLoading(false);
+    } catch (error: unknown) { // 👈 Mudei de 'any' para 'unknown'
+      console.error("Erro ao carregar pedidos:", error);
+      const errMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      if (errMessage === "NO_TOKEN" || errMessage === "TOKEN_INVALID") {
+        console.error("Token inválido ou ausente – redirecionando para login");
+        localStorage.removeItem('token');
+        router.push('/login');
+        return;
       }
+      setError("Erro ao carregar pedidos. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    load();
+  load();
   }, [router]);
 
   if (loading) {

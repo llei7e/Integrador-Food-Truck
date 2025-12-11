@@ -41,13 +41,12 @@ export default function RegisterPage() {
 
       setLoading(true);
 
-      // chama o backend para salvar no banco
       await register(nome, email, senha1);
 
-      // depois de cadastrar, manda o usuário pro login
       router.push("/login");
-    } catch (e: any) {
-      setErro(e.message || "Erro ao registrar usuário.");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Erro ao registrar usuário.";
+      setErro(errorMessage);
     } finally {
       setLoading(false);
     }

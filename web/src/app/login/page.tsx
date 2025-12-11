@@ -9,8 +9,6 @@ import OnEye from "../public/favicon/on_eye";
 import logo from "../public/logo.png";
 import Image from "next/image";
 
-import { login, register } from "@/services/authService";
-
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -21,19 +19,19 @@ export default function Login() {
 
   const router = useRouter();
 
-  async function handleLogin() {
-    try {
-      setLoading(true);
-      setErro(null);
+async function handleLogin() {
+try {
+  setLoading(true);
+  setErro(null);
 
-      const data = await login(email, senha);
-      router.push("/sales");
-    } catch (e: any) {
-      setErro(e.message || "Erro ao fazer login.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  router.push("/sales");
+} catch (e: unknown) {
+  const errorMessage = e instanceof Error ? e.message : "Erro ao fazer login.";
+  setErro(errorMessage);
+} finally {
+  setLoading(false);
+}
+}
 
   return (
     <div className="flex h-dvh w-full">

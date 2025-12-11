@@ -1,13 +1,9 @@
-// components/tableTruck.tsx (Atualizado com props para filtrar dados)
-import Status from "./ui/status";
-
 interface TableProps {
   selectedTruckId?: string;
   trucksList: { id: number; localizacao: string; ativo: boolean }[];
 }
 
 export default function Table({ selectedTruckId, trucksList }: TableProps) {
-  // Filtra lista baseada na seleção
   const filteredTrucks = selectedTruckId 
     ? trucksList.filter((truck) => truck.id.toString() === selectedTruckId)
     : trucksList;
