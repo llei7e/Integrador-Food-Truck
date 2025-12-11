@@ -1,47 +1,77 @@
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+// app/detalhesProduto.tsx
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ImageSourcePropType } from 'react-native';
 import { useLocalSearchParams, useNavigation, Stack, router} from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react'; // --- ALTERADO ---
 import { Ionicons } from '@expo/vector-icons';
-import EvilIcons from '@expo/vector-icons/EvilIcons';
+// import EvilIcons from '@expo/vector-icons/EvilIcons'; // Não é mais usado
+import { RFPercentage } from 'react-native-responsive-fontsize';
+import { useCart } from '../../context/CartContext'; // --- NOVO ---
 
-const adicionais = [
-    { id: 1, nome: "Carne Fatiada", imagem: require('../../assets/images/Carne.png') },
-    { id: 2, nome: "Queijo", imagem: require('../../assets/images/queijo.png') },
-    { id: 3, nome: "Maionese", imagem: require('../../assets/images/maio.jpg') },
-    { id: 4, nome: "Bacon", imagem: require('../../assets/images/bacon.jpg') }, // pode adicionar mais
-];
+// --- NOVO ---
+// Copiamos a lógica de imagens e tipos do home.tsx
+// ---
+interface Produto {
+  id: number;
+  nome: string;
+  descricao: string;
+  preco: number;
+  ativo: boolean;
+  categoriaId: number; 
+}
 
+const lancheImage = require('../../assets/images/lanche1.jpg');
+const comboImage = require('../../assets/images/fritas.jpg');
+const bebidaImage = require('../../assets/images/bebida1.jpg');
 
-const images: any = {
-    100: require('../../assets/images/lanche1.jpg'),
-    102: require('../../assets/images/lanche2.jpeg'),
-    103: require('../../assets/images/lanche3.jpg'),
-    104: require('../../assets/images/lanche4.jpg'),
-    105: require('../../assets/images/lanche5.jpg'), 
-    106: require('../../assets/images/lanche6.jpg'), 
-    107: require('../../assets/images/lanche7.jpg'), 
-    108: require('../../assets/images/lanche8.jpg'), 
-    109: require('../../assets/images/lanche9.jpg'), 
-
-    200: require('../../assets/images/combos.jpg'),
-    201: require('../../assets/images/combos.jpg'),
-    202: require('../../assets/images/combos.jpg'),
-
-    300: require('../../assets/images/bebida1.jpg'),
-    301: require('../../assets/images/bebida1.jpg'),
-    303: require('../../assets/images/bebida1.jpg'),
+const getImageForItem = (categoriaId: number): ImageSourcePropType => {
+  switch (categoriaId) {
+    case 1:
+      return lancheImage;
+    case 2:
+      return comboImage;
+    case 3:
+      return bebidaImage;
+    default:
+      return lancheImage;
+  }
 };
 
+const formatPrice = (price: number): string => {
+  return `R$ ${price.toFixed(2).replace('.', ',')}`;
+};
+// --- FIM DA SEÇÃO COPIADA ---
+
+
 export default function DetalhesProduto() {
-  const { id, name, price, description } = useLocalSearchParams();
-  const image = images[id as string];
+  // --- ALTERADO ---
+  // Recebe o 'item' como string JSON e o 'produto'
+  const { item } = useLocalSearchParams();
+  const produto = JSON.parse(item as string) as Produto;
 
   const navigation = useNavigation();
+  const { addToCart } = useCart(); // --- NOVO ---
+  const [quantity, setQuantity] = useState(1); // --- NOVO ---
 
    // Atualiza o título da página para o nome do item
     useEffect(() => {
-        navigation.setOptions({ title: name });
-    }, [name]);
+        navigation.setOptions({ title: produto.nome });
+    }, [produto.nome]);
+
+  // --- NOVAS FUNÇÕES ---
+  const handleIncrement = () => {
+    setQuantity(q => q + 1);
+  };
+
+  const handleDecrement = () => {
+    setQuantity(q => (q > 1 ? q - 1 : 1)); // Não deixa ser menor que 1
+  };
+
+  const handleAddToCart = () => {
+    addToCart(produto, quantity);
+    // Opcional: Navega para o carrinho ou mostra um "Toast" de sucesso
+    router.push('/(protected)/(tabs)/carrinho');
+  };
+  // --- FIM DAS NOVAS FUNÇÕES ---
 
   return (
     <>
@@ -51,49 +81,37 @@ export default function DetalhesProduto() {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Ionicons name="chevron-back-circle-outline" size={70} color="white" />
                 </TouchableOpacity>
-                <Image source={image as any} style={styles.image} />
+                {/* --- ALTERADO --- Usa a imagem correta baseada na categoriaId */}
+                <Image source={getImageForItem(produto.categoriaId)} style={styles.image} />
                 <View style={styles.logoPosition}>
                     <Image source={require('../../assets/images/Logo.png')} style={styles.logo}  />
                 </View>
 
                 <View style={styles.containerInfos}>
-                    <Text style={styles.name}>{name}</Text>
-                    <Text style={styles.price}>{price}</Text>
-                    <Text style={styles.description}>{description}</Text>
+                    <Text style={styles.name}>{produto.nome}</Text>
+                    {/* --- ALTERADO --- Formata o preço numérico */}
+                    <Text style={styles.price}>{formatPrice(produto.preco)}</Text>
+                    <Text style={styles.description}>{produto.descricao}</Text>
                 </View>
-
-                <View style={styles.containerAdd}>
-                    <Text style={styles.titleAdd} >Adicionais</Text>
-                    <Text style={styles.textAdd} >Escolha até 2 opções:</Text>
-                </View>
-
-                {adicionais.map((item) => (
-                    <View key={item.id} style={styles.opcoesCard}>
-                        <Text style={styles.opName}>{item.nome}</Text>
-                        <View style={styles.cardRight}>
-                            <Image source={item.imagem} style={styles.imgPqn} />
-                            <TouchableOpacity style={styles.addProduct}>
-                                <Text style={styles.opAdd}>+</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                ))}
 
                 <View style={styles.footer}></View>
             </ScrollView>
+            
+            {/* --- SEÇÃO DE BOTÕES ALTERADA --- */}
             <View style={styles.containerCartButtons}>
                 <View style={styles.quantityButton}>
-                    <TouchableOpacity style={styles.addProduct1}>
-                        <EvilIcons name="trash" size={60} color="black" />
+                    <TouchableOpacity style={styles.addProduct1} onPress={handleDecrement}>
+                        {/* Mudei o ícone de "trash" para "remove" */}
+                        <Ionicons name="remove" size={50} color="black" />
                     </TouchableOpacity>
 
-                    <Text style={styles.quantityText}>1</Text> {/* Adicionar contador posteriormente*/}
+                    <Text style={styles.quantityText}>{quantity}</Text>
 
-                    <TouchableOpacity style={styles.addProduct}>
+                    <TouchableOpacity style={styles.addProduct} onPress={handleIncrement}>
                         <Text style={styles.addButtonText}>+</Text>
                     </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.addCartButton}>
+                <TouchableOpacity style={styles.addCartButton} onPress={handleAddToCart}>
                     <Text style={styles.addCartText}>Adicionar ao Carrinho</Text>
                 </TouchableOpacity>
             </View>
@@ -102,12 +120,14 @@ export default function DetalhesProduto() {
   );
 }
 
+// --- ESTILOS ---
+// (Seus estilos permanecem os mesmos)
 const styles = StyleSheet.create({
     containerFull: { flex: 1, backgroundColor: 'white' },
-    image: { height: 450,  width: '100%'},
-    name: { fontSize: 50, fontWeight: 'bold', marginTop: 20,},
-    price: { fontSize: 35, color: '#A11613', marginTop: 10, fontWeight: '500' },
-    logo: { height: 184, width: 166, justifyContent: 'center'},
+    image: { height: RFPercentage(50),  width: '100%'},
+    name: { fontSize: RFPercentage(4), fontWeight: 'bold', marginTop: -RFPercentage(2)},
+    price: { fontSize: RFPercentage(3), color: '#A11613', marginTop: RFPercentage(1.5), fontWeight: '500' },
+    logo: { height: RFPercentage(18), width: RFPercentage(16), justifyContent: 'center'},
     backButton: {
         position: 'absolute',
         left: 30,
@@ -133,7 +153,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 40 
     },
     description:{
-        fontSize: 22,
+        marginTop: RFPercentage(1.5),
+        fontSize: RFPercentage(2),
         textAlign: 'justify',
         fontStyle: 'italic'
     },

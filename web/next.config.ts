@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  /* config options here */
+const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ['apexcharts', 'react-apexcharts', 'leaflet', 'react-leaflet'],
+  },
 };
+
+module.exports = nextConfig;
