@@ -9,16 +9,8 @@ interface ChartTruckProps {
 }
 
 export default function ChartTruck({ selectedTruckId, trucksList }: ChartTruckProps) {
-  // Check de segurança: se trucksList undefined, retorne loading
-  if (!trucksList || !Array.isArray(trucksList)) {
-    return (
-      <div className="chart-card max-w-sm w-full bg-white rounded-lg shadow-sm dark:bg-white p-4 md:p-6">
-        <p>Carregando gráfico...</p>
-      </div>
-    );
-  }
 
-  useEffect(() => {
+    useEffect(() => {
     if (typeof document === 'undefined') return;
 
     // Filtra dados para o gráfico
@@ -85,6 +77,14 @@ export default function ChartTruck({ selectedTruckId, trucksList }: ChartTruckPr
       chart.destroy();
     };
   }, [selectedTruckId, trucksList]);
+  
+  if (!trucksList || !Array.isArray(trucksList)) {
+    return (
+      <div className="chart-card max-w-sm w-full bg-white rounded-lg shadow-sm dark:bg-white p-4 md:p-6">
+        <p>Carregando gráfico...</p>
+      </div>
+    );
+  }
 
   // Agora seguro: trucksList é array
   const title = selectedTruckId ? `Profit - Truck ${selectedTruckId}` : "Profit Geral";
