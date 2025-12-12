@@ -1,11 +1,24 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Animated } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Animated, Platform } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RFPercentage } from 'react-native-responsive-fontsize';
+import * as Notifications from 'expo-notifications';
+import * as ScreenOrientation from 'expo-screen-orientation';
+
+// --- CONFIGURAÇÃO DE NOTIFICAÇÃO (CORRIGIDA) ---
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true, // Necessário para novas versões do Expo
+    shouldShowList: true,   // Necessário para novas versões do Expo
+  }),
+});
 
 interface ItemPedidoView {
   id: number;
@@ -31,31 +44,13 @@ const statusPriority: Record<string, number> = {
     'FINALIZADO': 3
 };
 
-// --- HELPER ATUALIZADO: Distingue Crédito e Débito ---
 const getPaymentInfo = (metodo: string) => {
     const m = metodo ? metodo.toLowerCase() : '';
-
-    if (m.includes('pix')) {
-        return { icon: 'qr-code-outline', label: 'PIX', color: '#32BCAD' }; // Verde Água
-    }
-    
-    if (m.includes('dinheiro') || m.includes('cash')) {
-        return { icon: 'cash-outline', label: 'DINHEIRO', color: '#28a745' }; // Verde
-    }
-
-    // Lógica para cartões
-    if (m.includes('credito')) {
-        return { icon: 'card-outline', label: 'CRÉDITO', color: '#3F51B5' }; // Azul Escuro/Índigo
-    }
-    
-    if (m.includes('debito')) {
-        return { icon: 'card-outline', label: 'DÉBITO', color: '#03A9F4' }; // Azul Claro
-    }
-
-    if (m.includes('card') || m.includes('cart')) {
-        return { icon: 'card-outline', label: 'CARTÃO', color: '#2196F3' }; // Azul Padrão
-    }
-
+    if (m.includes('pix')) return { icon: 'qr-code-outline', label: 'PIX', color: '#32BCAD' };
+    if (m.includes('dinheiro') || m.includes('cash')) return { icon: 'cash-outline', label: 'DINHEIRO', color: '#28a745' };
+    if (m.includes('credito')) return { icon: 'card-outline', label: 'CRÉDITO', color: '#3F51B5' };
+    if (m.includes('debito')) return { icon: 'card-outline', label: 'DÉBITO', color: '#03A9F4' };
+    if (m.includes('card') || m.includes('cart')) return { icon: 'card-outline', label: 'CARTÃO', color: '#2196F3' };
     return { icon: 'wallet-outline', label: metodo.toUpperCase(), color: '#666' };
 };
 
@@ -68,8 +63,23 @@ export default function ChapeiroScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Animação piscar
+  const lastKnownIdRef = useRef<number>(0);
   const blinkAnim = useState(new Animated.Value(1))[0];
+
+  // --- 1. FORÇAR ORIENTAÇÃO HORIZONTAL (LANDSCAPE) ---
+  useFocusEffect(
+    useCallback(() => {
+      const lockLandscape = async () => {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      };
+      lockLandscape();
+
+      return () => {
+        // Ao sair, volta para retrato (padrão)
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      };
+    }, [])
+  );
 
   useEffect(() => {
     Animated.loop(
@@ -80,12 +90,73 @@ export default function ChapeiroScreen() {
     ).start();
   }, []);
 
+  // --- 2. PERMISSÕES DE NOTIFICAÇÃO E CANAL ANDROID ---
+  useEffect(() => {
+      (async () => {
+          if (Platform.OS === 'web') {
+              if (Notification.permission !== "granted") {
+                  await Notification.requestPermission();
+              }
+          } else {
+              const { status } = await Notifications.requestPermissionsAsync();
+              if (status !== 'granted') console.log('Permissão de notificação negada!');
+
+              if (Platform.OS === 'android') {
+                  await Notifications.setNotificationChannelAsync('default', {
+                      name: 'default',
+                      importance: Notifications.AndroidImportance.MAX,
+                      vibrationPattern: [0, 250, 250, 250],
+                      lightColor: '#FF231F7C',
+                  });
+              }
+          }
+      })();
+  }, []);
+
+  // --- 3. DISPARAR NOTIFICAÇÃO (HÍBRIDO) ---
+  const dispararNotificacao = async (pedidoId: number) => {
+      const titulo = "🔥 Novo Pedido na Chapa!";
+      const corpo = `O pedido #${pedidoId} acabou de chegar na fila.`;
+
+      if (Platform.OS === 'web') {
+          if (Notification.permission === "granted") {
+              new Notification(titulo, { body: corpo });
+          }
+          return;
+      }
+
+      await Notifications.scheduleNotificationAsync({
+          content: {
+              title: titulo,
+              body: corpo,
+              sound: 'default',
+          },
+          trigger: null,
+      });
+  };
+
   const fetchPedidos = useCallback(async (isBackground = false) => {
     if (!isBackground && !refreshing) setLoading(true);
     
     try {
         const todosPedidos = await api('/api/pedidos', { auth: true }) as Pedido[];
         
+        // Detecta novo pedido na fila de produção (NA_FILA ou PREPARANDO)
+        const pedidosRelevantes = todosPedidos.filter(p => ['NA_FILA', 'PREPARANDO'].includes(p.status));
+        
+        if (pedidosRelevantes.length > 0) {
+            const maiorId = Math.max(...pedidosRelevantes.map(p => p.id));
+            
+            // Só notifica se o ID for maior que o último visto
+            if (lastKnownIdRef.current === 0) {
+                lastKnownIdRef.current = maiorId;
+            } else if (maiorId > lastKnownIdRef.current) {
+                dispararNotificacao(maiorId);
+                lastKnownIdRef.current = maiorId; 
+            }
+        }
+
+        // Filtra pagamentos pendentes (Dinheiro)
         const pendentes = todosPedidos.filter(p => p.status === 'AGUARDANDO_PAGAMENTO');
         setPagamentosPendentes(prev => {
              if (JSON.stringify(prev) !== JSON.stringify(pendentes)) return pendentes;
@@ -98,7 +169,7 @@ export default function ChapeiroScreen() {
             ['NA_FILA', 'PREPARANDO', 'FINALIZADO'].includes(p.status)
         );
 
-        // Ordenação: Status Priority > ID Maior (Mais novo)
+        // Ordenação
         producao.sort((a, b) => {
             const priorityA = statusPriority[a.status] || 99;
             const priorityB = statusPriority[b.status] || 99;
@@ -122,7 +193,7 @@ export default function ChapeiroScreen() {
 
   useEffect(() => {
     fetchPedidos(false);
-    const interval = setInterval(() => fetchPedidos(true), 15000);
+    const interval = setInterval(() => fetchPedidos(true), 5000);
     return () => clearInterval(interval);
   }, [fetchPedidos]);
 
@@ -205,7 +276,6 @@ export default function ChapeiroScreen() {
         </View>
 
         <View>
-            {/* PAGAMENTO DETALHADO */}
             <View style={styles.paymentContainer}>
                 <Ionicons name={payInfo.icon as any} size={22} color={payInfo.color} />
                 <Text style={[styles.paymentText, { color: payInfo.color }]}>
@@ -239,8 +309,6 @@ export default function ChapeiroScreen() {
   return (
     <LinearGradient
         colors={['#7E0000', '#520000']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 0 }}
         style={styles.container}
     >
       <View style={styles.header}>
@@ -310,7 +378,6 @@ export default function ChapeiroScreen() {
         ) : (
             <ScrollView 
                 horizontal={true}
-                pagingEnabled={false}
                 contentContainerStyle={styles.scrollContent}
                 showsHorizontalScrollIndicator={false}
                 refreshControl={
@@ -339,268 +406,96 @@ export default function ChapeiroScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  mainTitleContainer: {
-      alignItems: 'center',
-      paddingTop: RFPercentage(2),
-      paddingBottom: 5,
-      backgroundColor: 'rgba(32, 16, 0, 0.3)', 
-      zIndex: 11,
-  },
-  mainTitle: {
-    color: 'white', 
-    fontSize: 40,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-  },
+  container: { flex: 1 },
+  mainTitle: { color: 'white', fontSize: 40, fontWeight: 'bold', letterSpacing: 2 },
   header: {
     height: RFPercentage(14),
     backgroundColor: 'rgba(32, 16, 0, 0.6)', 
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: RFPercentage(2),
-    paddingVertical: RFPercentage(1),
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: RFPercentage(2), paddingVertical: RFPercentage(1),
     justifyContent: 'space-between',
   },
-  headerLeft: { 
-      flex: 1,
-      alignItems: 'flex-start',
-  },
-  notificationArea: {
-    flex: 1, 
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerRight: {
-      flex: 1, 
-      alignItems: 'flex-end',
-  },
+  headerLeft: { flex: 1, alignItems: 'flex-start' },
+  notificationArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  headerRight: { flex: 1, alignItems: 'flex-end' },
   settingsButton: {
-    flexDirection: 'row',
-    backgroundColor: '#F39D0A', 
-    width: RFPercentage(23),
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    gap: 8
+    flexDirection: 'row', backgroundColor: '#F39D0A', width: RFPercentage(23),
+    justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 15,
+    borderRadius: 10, alignItems: 'center', gap: 8
   },
-  settingsButtonText: {
-      fontWeight: '500',
-      color: '#201000',
-      fontSize: 25
-  },
+  settingsButtonText: { fontWeight: '500', color: '#201000', fontSize: 25 },
   logoffButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#A11613',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#A11613',
+    paddingVertical: 8, paddingHorizontal: 15, borderRadius: 10, gap: 8,
   },
-  logoffText: {
-    color: 'white',
-    fontWeight: '500',
-    fontSize: 25,
-  },
+  logoffText: { color: 'white', fontWeight: '500', fontSize: 25 },
   alertButton: {
-    backgroundColor: '#F39D0A',
-    paddingVertical: 8,
-    width: RFPercentage(23),
-    borderRadius: RFPercentage(1),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    marginBottom: RFPercentage(1),
+    backgroundColor: '#F39D0A', paddingVertical: 8, width: RFPercentage(23),
+    borderRadius: RFPercentage(1), flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: RFPercentage(1),
   },
-  alertText: {
-    color: 'black',
-    fontWeight: '500',
-    fontSize: 25,
-  },
+  alertText: { color: 'black', fontWeight: '500', fontSize: 25 },
   dropdownContainer: {
-    position: 'absolute',
-    top: RFPercentage(8),
-    left: 0,
-    alignSelf: 'center',
-    width: '50%', 
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 15,
-    zIndex: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    position: 'absolute', top: RFPercentage(8), left: 0, alignSelf: 'center',
+    width: '50%', backgroundColor: 'white', borderRadius: 15, padding: 15,
+    zIndex: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5, shadowRadius: 10, elevation: 20, borderWidth: 1, borderColor: '#ccc',
   },
   dropdownHeaderTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      textAlign: 'center',
-      marginBottom: 15,
-      color: '#201000',
-      textTransform: 'uppercase',
-      borderBottomWidth: 1,
-      borderBottomColor: '#eee',
-      paddingBottom: 10
+      fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginBottom: 15,
+      color: '#201000', textTransform: 'uppercase', borderBottomWidth: 1,
+      borderBottomColor: '#eee', paddingBottom: 10
   },
   dropdownItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0', backgroundColor: '#fff',
   },
   dropdownTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   dropdownValue: { fontSize: 16, color: '#666', marginTop: 2 },
   confirmButton: {
-    backgroundColor: '#28a745',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
+    backgroundColor: '#28a745', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 8,
   },
   confirmButtonText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
-
-  body: {
-    flex: 1,
-    justifyContent: 'center',
-  },
+  body: { flex: 1, justifyContent: 'center' },
   scrollContent: {
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    gap: 20,
-    flexGrow: 1,
-    justifyContent: 'center',
+    paddingHorizontal: 20, alignItems: 'center', gap: 20, flexGrow: 1, justifyContent: 'center',
   },
-  emptyContainer: {
-      width: Dimensions.get('window').width,
-      alignItems: 'center',
-      justifyContent: 'center',
-  },
-  emptyText: {
-    color: 'white',
-    fontSize: 20,
-    textAlign: 'center',
-    opacity: 0.8
-  },
+  emptyContainer: { width: Dimensions.get('window').width, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { color: 'white', fontSize: 20, textAlign: 'center', opacity: 0.8 },
   card: {
-    width: 320,
-    height: '80%',
-    backgroundColor: 'white',
-    borderRadius: 25,
-    padding: 20,
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-    marginVertical: 20,
+    width: 320, height: '80%', backgroundColor: 'white', borderRadius: 25,
+    padding: 20, justifyContent: 'space-between', shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 5,
+    elevation: 5, marginVertical: 20,
   },
-  cardDimmed: {
-    backgroundColor: '#e0e0e0',
-    opacity: 0.9,
-  },
-  cardTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
+  cardDimmed: { backgroundColor: '#e0e0e0', opacity: 0.9 },
+  cardTitle: { fontSize: 32, fontWeight: 'bold', textAlign: 'center', marginBottom: 10 },
   statusBadge: {
-    borderWidth: 2,
-    borderRadius: 20,
-    paddingVertical: 5,
-    paddingHorizontal: 15,
-    alignSelf: 'center',
-    marginBottom: 15,
+    borderWidth: 2, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 15,
+    alignSelf: 'center', marginBottom: 15,
   },
-  statusText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  itemsContainer: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    textDecorationLine: 'underline',
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  itemText: {
-    fontSize: 18,
-    marginBottom: 5,
-    fontWeight: 'bold',
-    color: '#333',
-  },
+  statusText: { fontSize: 16, fontWeight: 'bold', textTransform: 'uppercase' },
+  itemsContainer: { flex: 1 },
+  sectionTitle: { fontSize: 18, textDecorationLine: 'underline', marginBottom: 8, fontWeight: '600' },
+  itemText: { fontSize: 18, marginBottom: 5, fontWeight: 'bold', color: '#333' },
   paymentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    marginBottom: 5,
-    paddingVertical: 5,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 5, marginBottom: 5, paddingVertical: 5, backgroundColor: '#f9f9f9', borderRadius: 10,
   },
-  paymentText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  paymentText: { fontSize: 16, fontWeight: 'bold' },
   totalContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      borderTopWidth: 1,
-      borderTopColor: '#eee',
-      paddingTop: 10,
-      marginBottom: 10
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 10, marginBottom: 10
   },
-  totalLabel: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#333'
-  },
-  totalValue: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: '#A11613',
-  },
-  obsContainer: {
-    marginBottom: 15,
-    minHeight: 50,
-  },
-  obsText: {
-    fontSize: 16,
-    fontStyle: 'italic',
-    color: '#555',
-  },
+  totalLabel: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  totalValue: { fontSize: 20, fontWeight: 'bold', color: '#A11613' },
+  obsContainer: { marginBottom: 15, minHeight: 50 },
+  obsText: { fontSize: 16, fontStyle: 'italic', color: '#555' },
   actionButton: {
-    paddingVertical: 15,
-    borderRadius: 30,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 3,
+    paddingVertical: 15, borderRadius: 30, alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3, shadowRadius: 3, elevation: 3,
   },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
+  actionButtonText: { color: 'white', fontSize: 20, fontWeight: 'bold' },
 });

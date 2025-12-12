@@ -6,7 +6,10 @@ import { BASE_URL } from "../lib/api";
 import { ApiError } from "../lib/api";
 import { getAuth, saveAuth, clearAuth } from "../lib/storage";
 
-// Define o tipo do usuário e cargos
+// Garante que o navegador feche corretamente após o redirecionamento
+WebBrowser.maybeCompleteAuthSession();
+
+// Tipos
 type User = { 
   id?: string; 
   name?: string; 
@@ -30,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Helper para normalizar o cargo (garante maiúsculo e trata 'user' minúsculo)
+  // Helper para normalizar o cargo
   const normalizeCargo = (role?: string) => {
       if (!role) return "USUARIO";
       const upper = role.toUpperCase();
@@ -38,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return upper;
   };
 
-  // Restaura sessão ao abrir o app
+  // 1. Restaura sessão ao abrir o app
   useEffect(() => {
     (async () => {
       try {
@@ -54,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  // ---------- LOGIN (EMAIL + SENHA) ----------
+  // 2. Login Tradicional (Email + Senha)
   async function signIn(email: string, password: string) {
     const res = await fetch(`${BASE_URL}/api/auth/login`, {
       method: "POST",
@@ -69,10 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) throw new ApiError("Token não retornado pelo login", 500, data);
 
     const userData = data?.user;
-
-    // Normaliza o cargo vindo do backend
-    const rawRole = userData?.cargo || userData?.role;
-    const cargo = normalizeCargo(rawRole);
+    const cargo = normalizeCargo(userData?.cargo || userData?.role);
 
     const u: User = { 
         email, 
@@ -85,19 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);
   }
 
-  // ---------- CADASTRO ----------
-  // role é opcional, padrão "USUARIO"
+  // 3. Cadastro
   async function signUp(name: string, email: string, password: string, role: string = "USUARIO") {
     const res = await fetch(`${BASE_URL}/api/auth/register`, {
       method: "POST",
       headers: { Accept: "application/json", "Content-Type": "application/json" },
-      // Envia a chave 'cargo' que o DTO do backend espera
-      body: JSON.stringify({ 
-          name, 
-          email, 
-          password, 
-          cargo: role 
-      }), 
+      body: JSON.stringify({ name, email, password, cargo: role }), 
     });
 
     let data: any = null; try { data = await res.json(); } catch {}
@@ -106,17 +99,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signIn(email, password);
   }
 
+  // 4. Logout
   async function signOut() {
     await clearAuth();
     setUser(null);
   }
 
-  // ---------- GOOGLE (Processamento) ----------
+  // 5. Finalização do Login Social (Chamado pela tela oauth-google)
   async function completeSocialLogin(token: string, userRaw: any) {
     const data = (typeof userRaw === 'object') ? userRaw : { email: userRaw };
-    
-    const rawRole = data?.cargo || data?.role;
-    const cargo = normalizeCargo(rawRole);
+    const cargo = normalizeCargo(data?.cargo || data?.role);
 
     const u: User = {
       email: data?.email ?? "email@desconhecido.com",
@@ -129,35 +121,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);                      
   }
 
-  // ---------- GOOGLE (Início do Fluxo) ----------
+  // 6. Início do Login com Google (Ajustado para AWS + nip.io)
   async function signInWithGoogle() {
-    // 1. Define a URL de retorno para o App/Web
+    // A) URL que o Backend deve chamar para devolver o usuário para o App
     const redirectUri = Linking.createURL("/oauth-google");
     
-    // Fallback para Web Localhost se necessário (ajuste conforme seu ambiente)
-    const finalRedirect = Platform.OS === 'web' 
-        ? "http://localhost:8081/oauth-google" 
-        : redirectUri;
+    // B) URL Base "Fake" usando nip.io para enganar a validação de IP do Google Cloud
+    // Isso aponta para o seu IP da AWS: 54.146.16.231
+    const BASE_URL_AUTH = "http://54.146.16.231.nip.io:8080";
 
-    // 2. Chama o endpoint do Spring Security para OAuth2
-    // IMPORTANTE: NÃO chame /api/auth/google aqui (isso seria POST).
-    // Chame o endpoint de autorização GET padrão do Spring.
-    const authUrl = `${BASE_URL}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(finalRedirect)}`;
+    // C) Monta a URL de autorização do Spring Security
+    // O parametro redirect_uri aqui diz pro Spring: "Depois de falar com o Google, volte para o App"
+    const authUrl = `${BASE_URL_AUTH}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
+    // Se for Web, redireciona direto
     if (Platform.OS === "web") {
       window.location.href = authUrl;
       return;
     }
 
-    // 3. Abre o navegador
-    const result = await WebBrowser.openAuthSessionAsync(authUrl, finalRedirect);
+    // Se for Mobile, abre o navegador interno
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
-    // 4. Processa o retorno
+    // D) Processamento do Retorno (Caso o deep link funcione diretamente aqui)
     if (result.type === "success" && result.url) {
       const parsed = Linking.parse(result.url);
       const qp = parsed.queryParams || {};
 
-      // Tenta ler o payload JSON que o SuccessHandler enviou
       if (qp.payload) {
           try {
               const jsonStr = decodeURIComponent(qp.payload as string);
@@ -173,16 +163,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.error("Erro no parse do payload Google:", e);
           }
       }
-
-      // Fallback antigo (caso o payload falhe)
-      let token = (qp.access_token || qp.token) as string | undefined;
-      let email = (qp.email as string | undefined) ?? null;
-
-      if (!token) throw new Error("Token ausente no retorno do Google.");
-      await completeSocialLogin(token, { email });
-
-    } else {
-      // throw new Error("Login com Google cancelado."); // Opcional lançar erro
     }
   }
 

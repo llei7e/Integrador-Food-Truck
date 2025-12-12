@@ -1,242 +1,236 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Dimensions, ImageSourcePropType } from 'react-native';
-import { router } from 'expo-router';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Switch, StatusBar } from 'react-native';
+import { api } from '../../lib/api';
 import { Ionicons } from '@expo/vector-icons';
-import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
-import { useProdutos, Produto } from '../../hooks/useProdutos'; // Importe seu hook
+import { router, useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { RFPercentage } from 'react-native-responsive-fontsize';
+import * as ScreenOrientation from 'expo-screen-orientation';
 
-// --- Helpers Visuais (Mesma lógica da Home para manter padrão) ---
-const lancheImage = require('../../assets/images/lanche1.jpg');
-const comboImage = require('../../assets/images/combos.jpg');
-const bebidaImage = require('../../assets/images/bebida1.jpg');
+interface Produto {
+  id: number;
+  nome: string;
+  preco: number;
+  ativo: boolean;
+  categoriaId: number;
+}
 
-const getImageForItem = (categoriaId: number): ImageSourcePropType => {
-  switch (categoriaId) {
-    case 1: return lancheImage; // Lanches
-    case 2: return comboImage;  // Combos
-    case 3: return bebidaImage; // Bebidas
-    default: return lancheImage;
-  }
-};
+export default function DefinicaoProdutos() {
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const formatPrice = (price: number): string => {
-    // OBS: Se seu banco salva em centavos (ex: 2000), divida por 100 aqui.
-    // Se já salva em reais (ex: 20.00), mantenha como está.
-    const valorReal = price > 100 ? price / 100 : price; 
-    return `R$ ${valorReal.toFixed(2).replace('.', ',')}`;
-};
+  // --- 1. FORÇAR ORIENTAÇÃO HORIZONTAL ---
+  useFocusEffect(
+    useCallback(() => {
+      const lockLandscape = async () => {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      };
+      lockLandscape();
 
-export default function definicaoProdutos() {
-    const { produtos, loading, toggleAtivo } = useProdutos();
+      return () => {
+        // Ao voltar, força retrato novamente (ou default)
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      };
+    }, [])
+  );
 
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#F39D0A" />
-                <Text style={styles.loadingText}>Carregando estoque...</Text>
-            </View>
-        );
+  const fetchProdutos = async () => {
+    try {
+      setLoading(true);
+      const data = await api('/api/produtos', { auth: true }) as Produto[];
+      // Ordena por nome
+      data.sort((a, b) => a.nome.localeCompare(b.nome));
+      setProdutos(data);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Erro', 'Não foi possível carregar os produtos.');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const renderProdutoCard = (produto: Produto) => {
-        const isAtivo = produto.ativo;
+  useEffect(() => {
+    fetchProdutos();
+  }, []);
+
+  const toggleProduto = async (id: number, ativoAtual: boolean) => {
+    try {
+      // Otimista: atualiza a UI antes
+      setProdutos(prev => prev.map(p => p.id === id ? { ...p, ativo: !ativoAtual } : p));
+
+      // Chama a API para persistir (PATCH no campo ativo)
+      // Ajuste a rota conforme seu backend. Se for PUT completo, envie todo o objeto.
+      // Supondo PATCH parcial:
+      await api(`/api/produtos/${id}`, {
+        method: 'PATCH',
+        auth: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ativo: !ativoAtual })
+      });
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Erro', 'Falha ao atualizar produto. Revertendo...');
+      fetchProdutos(); // Reverte em caso de erro
+    }
+  };
+
+  const renderItem = ({ item }: { item: Produto }) => (
+    <View style={[styles.card, !item.ativo && styles.cardInactive]}>
+      <View style={styles.infoContainer}>
+        <Text style={[styles.productName, !item.ativo && styles.textInactive]}>{item.nome}</Text>
+        <Text style={styles.productPrice}>R$ {item.preco.toFixed(2).replace('.', ',')}</Text>
+      </View>
+      
+      <View style={styles.switchContainer}>
+        <Text style={[styles.statusText, item.ativo ? styles.activeText : styles.inactiveText]}>
+            {item.ativo ? 'DISPONÍVEL' : 'INDISPONÍVEL'}
+        </Text>
+        <Switch
+          trackColor={{ false: "#767577", true: "#28a745" }}
+          thumbColor={item.ativo ? "#fff" : "#f4f3f4"}
+          onValueChange={() => toggleProduto(item.id, item.ativo)}
+          value={item.ativo}
+          style={{ transform: [{ scaleX: 1.2 }, { scaleY: 1.2 }] }} 
+        />
+      </View>
+    </View>
+  );
+
+  return (
+    <LinearGradient
+        colors={['#7E0000', '#520000']}
+        style={styles.container}
+    >
+      <StatusBar hidden />
+      
+      {/* HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={30} color="white" />
+            <Text style={styles.backText}>Voltar para Chapa</Text>
+        </TouchableOpacity>
         
-        return (
-            <TouchableOpacity 
-                key={produto.id} 
-                // Aplica estilo "cardInativo" se não estiver ativo
-                style={[styles.card, !isAtivo && styles.cardInativo]}
-                onPress={() => toggleAtivo(produto.id, isAtivo)}
-                activeOpacity={0.8}
-            >
-                {/* Imagem com opacidade reduzida se inativo */}
-                <Image 
-                    source={getImageForItem(produto.categoriaId)} 
-                    style={[styles.cardImage, !isAtivo && { opacity: 0.4 }]} 
-                />
-                
-                <View style={styles.cardContent}>
-                    <Text style={[styles.cardTitle, !isAtivo && { color: '#666' }]} numberOfLines={1}>
-                        {produto.nome}
-                    </Text>
-                    
-                    <View style={styles.rowPriceStatus}>
-                        <Text style={[styles.cardPrice, !isAtivo && { color: '#888' }]}>
-                            {formatPrice(produto.preco)}
-                        </Text>
-                        
-                        {/* Badge de Status */}
-                        <View style={[
-                            styles.statusBadge, 
-                            { backgroundColor: isAtivo ? "#28a745" : "#555" }
-                        ]}>
-                            <Ionicons 
-                                name={isAtivo ? "eye" : "eye-off"} 
-                                size={12} 
-                                color="white" 
-                                style={{marginRight: 4}} 
-                            />
-                            <Text style={styles.statusText}>
-                                {isAtivo ? "ATIVO" : "INATIVO"}
-                            </Text>
-                        </View>
-                    </View>
-                </View>
+        <Text style={styles.title}>Gerenciar Disponibilidade</Text>
+        
+        {/* Espaço vazio para equilibrar o header */}
+        <View style={{ width: 100 }} /> 
+      </View>
 
-                {/* Ícone grande de bloqueio sobreposto se inativo */}
-                {!isAtivo && (
-                    <View style={styles.inactiveOverlay}>
-                        <Ionicons name="lock-closed" size={40} color="rgba(255,255,255,0.8)" />
-                        <Text style={styles.inactiveText}>INDISPONÍVEL</Text>
-                    </View>
-                )}
-            </TouchableOpacity>
-        );
-    };
-
-    return (
-        <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerLeft}>
-                    <Text style={styles.headerTitle}>Gerenciar Produtos</Text>
-                </View>
-                
-                {/* Botão Vice-Versa (Ir para Pedidos) */}
-                <TouchableOpacity 
-                    style={styles.navButton} 
-                    onPress={() => router.replace('/(protected)/telaChapeiro')}
-                >
-                    <Ionicons name="arrow-back" size={30} color="black" />
-                    <Text style={styles.navButtonText}>Fila de Pedidos</Text>
-                </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <Text style={styles.helperText}>
-                    Toque em um produto para ocultá-lo do cardápio dos clientes.
-                </Text>
-                <View style={styles.grid}>
-                    {produtos.map(renderProdutoCard)}
-                </View>
-            </ScrollView>
-        </View>
-    );
+      <View style={styles.body}>
+        {loading ? (
+            <ActivityIndicator size="large" color="#F39D0A" />
+        ) : (
+            <FlatList
+                data={produtos}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={renderItem}
+                numColumns={2} // Grid de 2 colunas para aproveitar a tela horizontal
+                columnWrapperStyle={styles.columnWrapper}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+            />
+        )}
+      </View>
+    </LinearGradient>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f0f0f0' },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#201000' },
-    loadingText: { color: 'white', marginTop: 10, fontSize: 16 },
-    
-    // Header
-    header: {
-        height: RFPercentage(12),
-        backgroundColor: '#201000',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingBottom: 15,
-        paddingHorizontal: 20,
-        zIndex: 10,
-    },
-    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-    backButton: { padding: 0 },
-    headerTitle: { fontSize: RFPercentage(4), fontWeight: 'bold', color: 'white' },
-    
-    navButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F39D0A',
-        paddingVertical: 8,
-        paddingHorizontal: RFPercentage(1.5),
-        borderRadius: RFPercentage(1),
-        gap: RFPercentage(1),
-        position: 'absolute',
-        left: RFPercentage(2),
-        bottom: RFPercentage(1),
-    },
-    navButtonText: { fontSize: 25, fontWeight: '500', color: 'black' },
-
-    // Content
-    scrollContent: { padding: 15, paddingBottom: 50 },
-    helperText: { textAlign: 'center', color: '#666', marginBottom: 20, fontStyle: 'italic' },
-    grid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-    },
-
-    // Card
-    card: {
-        width: '48%', // 2 colunas
-        backgroundColor: 'white',
-        borderRadius: 15,
-        marginBottom: 15,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        elevation: 4,
-        overflow: 'hidden',
-        position: 'relative',
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    cardInativo: {
-        backgroundColor: '#e0e0e0', // Fundo cinza
-        borderColor: '#999',
-        borderStyle: 'dashed',
-    },
-    cardImage: {
-        width: '100%',
-        height: 130,
-        resizeMode: 'cover',
-    },
-    cardContent: {
-        padding: 12,
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#201000',
-        marginBottom: 6,
-    },
-    rowPriceStatus: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    cardPrice: {
-        fontSize: 15,
-        color: '#A11613',
-        fontWeight: 'bold',
-    },
-    statusBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        borderRadius: 8,
-    },
-    statusText: {
-        color: 'white',
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
-    inactiveOverlay: {
-        ...StyleSheet.absoluteFillObject, // Cobre o card todo
-        backgroundColor: 'rgba(0,0,0,0.05)', // Levemente escuro
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 2,
-    },
-    inactiveText: {
-        color: 'white',
-        fontWeight: 'bold',
-        marginTop: 5,
-        textShadowColor: 'rgba(0, 0, 0, 0.75)',
-        textShadowOffset: {width: -1, height: 1},
-        textShadowRadius: 5
-    }
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: 'rgba(32, 16, 0, 0.6)',
+    height: RFPercentage(12),
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#A11613',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    gap: 5
+  },
+  backText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  title: {
+    color: '#F39D0A',
+    fontSize: 30,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  body: {
+    flex: 1,
+    padding: 20,
+  },
+  listContent: {
+    paddingBottom: 20,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    gap: 20,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    minHeight: 100,
+  },
+  cardInactive: {
+    backgroundColor: '#e0e0e0',
+    opacity: 0.8,
+  },
+  infoContainer: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  textInactive: {
+    color: '#777',
+    textDecorationLine: 'line-through',
+  },
+  productPrice: {
+    fontSize: 18,
+    color: '#666',
+    fontWeight: '600'
+  },
+  switchContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 120,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  activeText: {
+    color: '#28a745',
+  },
+  inactiveText: {
+    color: '#A11613',
+  },
 });
