@@ -2,9 +2,9 @@ name: CI/CD - React + Java + AWS (Staging & Prod)
 
 on:
   push:
-    branches: [ staging,feature/cicd-43 ]
+    branches: [ staging ]
   pull_request:
-    branches: [ staging,feature/cicd-43 ]
+    branches: [ staging ]
 
 jobs:
   test-frontend:
