@@ -1,4 +1,3 @@
-// context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import * as Linking from "expo-linking";
@@ -7,16 +6,22 @@ import { BASE_URL } from "../lib/api";
 import { ApiError } from "../lib/api";
 import { getAuth, saveAuth, clearAuth } from "../lib/storage";
 
-type User = { id?: string; name?: string; email: string };
+// Define o tipo do usuário e cargos
+type User = { 
+  id?: string; 
+  name?: string; 
+  email: string; 
+  cargo: 'CHAPEIRO' | 'USUARIO' | 'ADMIN' | string; 
+};
 
 type AuthCtx = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, role?: string) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  completeSocialLogin: (token: string, email?: string | null) => Promise<void>;
+  completeSocialLogin: (token: string, userRaw: any) => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -25,29 +30,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
+  // Helper para normalizar o cargo (garante maiúsculo e trata 'user' minúsculo)
+  const normalizeCargo = (role?: string) => {
+      if (!role) return "USUARIO";
+      const upper = role.toUpperCase();
+      if (upper === 'USER') return 'USUARIO';
+      return upper;
+  };
+
+  // Restaura sessão ao abrir o app
+  useEffect(() => {
     (async () => {
       try {
-        // Limpa qualquer sessão anterior ao iniciar o app.
-        await clearAuth();
+        const saved = await getAuth();
+        if (saved && saved.token && saved.user) {
+          setUser(saved.user);
+        } else {
+          await clearAuth();
+        }
       } finally {
-        // Finaliza o carregamento para a tela de login aparecer.
         setLoading(false);
       }
     })();
   }, []);
 
-  // ---------- EMAIL/SENHA ----------
+  // ---------- LOGIN (EMAIL + SENHA) ----------
   async function signIn(email: string, password: string) {
-    const body = new URLSearchParams({
-      grant_type: "password",
-      username: email,
-      password,
-      scope: "",
-      client_id: "",
-      client_secret: "",
-    });
-
     const res = await fetch(`${BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: { Accept: "application/json", "Content-Type": "application/json" },
@@ -60,18 +68,37 @@ useEffect(() => {
     const token: string | undefined = data?.access_token || data?.accessToken || data?.token;
     if (!token) throw new ApiError("Token não retornado pelo login", 500, data);
 
-    const u: User = { email, name: data?.user?.name || "Usuário(a)", id: data?.user?.id };
+    const userData = data?.user;
+
+    // Normaliza o cargo vindo do backend
+    const rawRole = userData?.cargo || userData?.role;
+    const cargo = normalizeCargo(rawRole);
+
+    const u: User = { 
+        email, 
+        name: userData?.name || "Usuário(a)", 
+        id: userData?.id,
+        cargo: cargo 
+    };
+
     await saveAuth(token, u, null);
     setUser(u);
   }
 
-  async function signUp(name: string, email: string, password: string) {
+  // ---------- CADASTRO ----------
+  // role é opcional, padrão "USUARIO"
+  async function signUp(name: string, email: string, password: string, role: string = "USUARIO") {
     const res = await fetch(`${BASE_URL}/api/auth/register`, {
-        method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role: "user" }),
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      // Envia a chave 'cargo' que o DTO do backend espera
+      body: JSON.stringify({ 
+          name, 
+          email, 
+          password, 
+          cargo: role 
+      }), 
     });
-
 
     let data: any = null; try { data = await res.json(); } catch {}
     if (!res.ok) throw new ApiError(data?.message || data?.detail || `Erro ${res.status}`, res.status, data);
@@ -84,55 +111,78 @@ useEffect(() => {
     setUser(null);
   }
 
-  // ---------- GOOGLE ----------
-  // salva token vindo do callback e cria o usuário local
-  async function completeSocialLogin(token: string, email?: string | null) {
-    const u: User = { email: email ?? "email@desconhecido.com", name: "Usuário(a)" };
-    await saveAuth(token, u, null);
-    setUser(u);
+  // ---------- GOOGLE (Processamento) ----------
+  async function completeSocialLogin(token: string, userRaw: any) {
+    const data = (typeof userRaw === 'object') ? userRaw : { email: userRaw };
+    
+    const rawRole = data?.cargo || data?.role;
+    const cargo = normalizeCargo(rawRole);
+
+    const u: User = {
+      email: data?.email ?? "email@desconhecido.com",
+      name: data?.name ?? "Usuário(a)",
+      id: data?.id ? String(data.id) : undefined,
+      cargo: cargo 
+    };
+    
+    await saveAuth(token, u, null);  
+    setUser(u);                      
   }
 
+  // ---------- GOOGLE (Início do Fluxo) ----------
   async function signInWithGoogle() {
-    // URL de retorno:
-    // - Web: usa a origem atual (porta correta, ex. 8081)
-    // - Nativo: usa um deep link do app (expo-router)
-    const redirectUri =
-      Platform.OS === "web"
-        ? `${window.location.origin}/oauth-google`
-        : Linking.createURL("/oauth-google");
+    // 1. Define a URL de retorno para o App/Web
+    const redirectUri = Linking.createURL("/oauth-google");
+    
+    // Fallback para Web Localhost se necessário (ajuste conforme seu ambiente)
+    const finalRedirect = Platform.OS === 'web' 
+        ? "http://localhost:8081/oauth-google" 
+        : redirectUri;
 
-    const authUrl = `${BASE_URL}/auth/google/login?redirect=${encodeURIComponent(redirectUri)}`;
+    // 2. Chama o endpoint do Spring Security para OAuth2
+    // IMPORTANTE: NÃO chame /api/auth/google aqui (isso seria POST).
+    // Chame o endpoint de autorização GET padrão do Spring.
+    const authUrl = `${BASE_URL}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(finalRedirect)}`;
 
     if (Platform.OS === "web") {
-      // abre na mesma aba; o backend vai redirecionar de volta para /oauth-google
       window.location.href = authUrl;
       return;
     }
 
-    // Em nativo, abrimos a sessão e capturamos a URL de retorno
-    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+    // 3. Abre o navegador
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, finalRedirect);
 
+    // 4. Processa o retorno
     if (result.type === "success" && result.url) {
       const parsed = Linking.parse(result.url);
       const qp = parsed.queryParams || {};
 
+      // Tenta ler o payload JSON que o SuccessHandler enviou
+      if (qp.payload) {
+          try {
+              const jsonStr = decodeURIComponent(qp.payload as string);
+              const data = JSON.parse(jsonStr);
+              const token = data.access_token;
+              const userRaw = data.user; 
+
+              if (token && userRaw) {
+                  await completeSocialLogin(token, userRaw);
+                  return;
+              }
+          } catch (e) {
+              console.error("Erro no parse do payload Google:", e);
+          }
+      }
+
+      // Fallback antigo (caso o payload falhe)
       let token = (qp.access_token || qp.token) as string | undefined;
       let email = (qp.email as string | undefined) ?? null;
 
-      // fallback: caso o backend devolva no hash #access_token
-      if (!token) {
-        try {
-          const url = new URL(result.url);
-          const h = new URLSearchParams(url.hash.replace(/^#/, ""));
-          token = token || (h.get("access_token") ?? h.get("token") ?? undefined);
-          email = email || h.get("email");
-        } catch {}
-      }
-
       if (!token) throw new Error("Token ausente no retorno do Google.");
-      await completeSocialLogin(token, email);
+      await completeSocialLogin(token, { email });
+
     } else {
-      throw new Error("Login com Google cancelado.");
+      // throw new Error("Login com Google cancelado."); // Opcional lançar erro
     }
   }
 

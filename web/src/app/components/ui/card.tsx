@@ -4,9 +4,10 @@ interface cardProps {
     iconImage:string;
     iconColor:string;
     Title:string;
+    API_VALUE:number | string;
 }
 
-export default function Card({iconImage,iconColor,Title}:cardProps){
+export default function Card({iconImage,iconColor,Title,API_VALUE}:cardProps){
     return (
     <div className="max-w-sm p-6 bg-white rounded-3xl shadow-sm mt-2 ml-5 h-30 w-80 flex align-middle items-center">
         <div>
@@ -19,7 +20,7 @@ export default function Card({iconImage,iconColor,Title}:cardProps){
                 </h5>
             </a>
             <p className="mb-3 font-normal text-gray-700 flex justify-center">
-                3
+                {API_VALUE}
             </p>
         </div>
     </div>
