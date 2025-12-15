@@ -1,11 +1,29 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Animated } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions, Animated, Platform } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { RFPercentage } from 'react-native-responsive-fontsize';
+import * as Notifications from 'expo-notifications';
+import * as ScreenOrientation from 'expo-screen-orientation';
+
+// --- LÓGICA DE ESCALA MATEMÁTICA ---
+const { width, height } = Dimensions.get('window');
+const realWidth = width > height ? width : height;
+const guidelineBaseWidth = 1366;
+const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
+// -------------------------------------
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 interface ItemPedidoView {
   id: number;
@@ -31,31 +49,13 @@ const statusPriority: Record<string, number> = {
     'FINALIZADO': 3
 };
 
-// --- HELPER ATUALIZADO: Distingue Crédito e Débito ---
 const getPaymentInfo = (metodo: string) => {
     const m = metodo ? metodo.toLowerCase() : '';
-
-    if (m.includes('pix')) {
-        return { icon: 'qr-code-outline', label: 'PIX', color: '#32BCAD' }; // Verde Água
-    }
-    
-    if (m.includes('dinheiro') || m.includes('cash')) {
-        return { icon: 'cash-outline', label: 'DINHEIRO', color: '#28a745' }; // Verde
-    }
-
-    // Lógica para cartões
-    if (m.includes('credito')) {
-        return { icon: 'card-outline', label: 'CRÉDITO', color: '#3F51B5' }; // Azul Escuro/Índigo
-    }
-    
-    if (m.includes('debito')) {
-        return { icon: 'card-outline', label: 'DÉBITO', color: '#03A9F4' }; // Azul Claro
-    }
-
-    if (m.includes('card') || m.includes('cart')) {
-        return { icon: 'card-outline', label: 'CARTÃO', color: '#2196F3' }; // Azul Padrão
-    }
-
+    if (m.includes('pix')) return { icon: 'qr-code-outline', label: 'PIX', color: '#32BCAD' };
+    if (m.includes('dinheiro') || m.includes('cash')) return { icon: 'cash-outline', label: 'DINHEIRO', color: '#28a745' };
+    if (m.includes('credito')) return { icon: 'card-outline', label: 'CRÉDITO', color: '#3F51B5' };
+    if (m.includes('debito')) return { icon: 'card-outline', label: 'DÉBITO', color: '#03A9F4' };
+    if (m.includes('card') || m.includes('cart')) return { icon: 'card-outline', label: 'CARTÃO', color: '#2196F3' };
     return { icon: 'wallet-outline', label: metodo.toUpperCase(), color: '#666' };
 };
 
@@ -68,8 +68,17 @@ export default function ChapeiroScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Animação piscar
+  const lastKnownIdRef = useRef<number>(0);
   const blinkAnim = useState(new Animated.Value(1))[0];
+
+  useFocusEffect(
+    useCallback(() => {
+      const lockLandscape = async () => {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      };
+      lockLandscape();
+    }, [])
+  );
 
   useEffect(() => {
     Animated.loop(
@@ -80,12 +89,66 @@ export default function ChapeiroScreen() {
     ).start();
   }, []);
 
+  useEffect(() => {
+      (async () => {
+          if (Platform.OS === 'web') {
+              if (Notification.permission !== "granted") {
+                  await Notification.requestPermission();
+              }
+          } else {
+              const { status } = await Notifications.requestPermissionsAsync();
+              if (status !== 'granted') console.log('Permissão de notificação negada!');
+
+              if (Platform.OS === 'android') {
+                  await Notifications.setNotificationChannelAsync('default', {
+                      name: 'default',
+                      importance: Notifications.AndroidImportance.MAX,
+                      vibrationPattern: [0, 250, 250, 250],
+                      lightColor: '#FF231F7C',
+                  });
+              }
+          }
+      })();
+  }, []);
+
+  const dispararNotificacao = async (pedidoId: number) => {
+      const titulo = "🔥 Novo Pedido na Chapa!";
+      const corpo = `O pedido #${pedidoId} acabou de chegar na fila.`;
+
+      if (Platform.OS === 'web') {
+          if (Notification.permission === "granted") {
+              new Notification(titulo, { body: corpo });
+          }
+          return;
+      }
+
+      await Notifications.scheduleNotificationAsync({
+          content: {
+              title: titulo,
+              body: corpo,
+              sound: 'default',
+          },
+          trigger: null,
+      });
+  };
+
   const fetchPedidos = useCallback(async (isBackground = false) => {
     if (!isBackground && !refreshing) setLoading(true);
     
     try {
         const todosPedidos = await api('/api/pedidos', { auth: true }) as Pedido[];
+        const pedidosRelevantes = todosPedidos.filter(p => ['NA_FILA', 'PREPARANDO'].includes(p.status));
         
+        if (pedidosRelevantes.length > 0) {
+            const maiorId = Math.max(...pedidosRelevantes.map(p => p.id));
+            if (lastKnownIdRef.current === 0) {
+                lastKnownIdRef.current = maiorId;
+            } else if (maiorId > lastKnownIdRef.current) {
+                dispararNotificacao(maiorId);
+                lastKnownIdRef.current = maiorId; 
+            }
+        }
+
         const pendentes = todosPedidos.filter(p => p.status === 'AGUARDANDO_PAGAMENTO');
         setPagamentosPendentes(prev => {
              if (JSON.stringify(prev) !== JSON.stringify(pendentes)) return pendentes;
@@ -98,7 +161,6 @@ export default function ChapeiroScreen() {
             ['NA_FILA', 'PREPARANDO', 'FINALIZADO'].includes(p.status)
         );
 
-        // Ordenação: Status Priority > ID Maior (Mais novo)
         producao.sort((a, b) => {
             const priorityA = statusPriority[a.status] || 99;
             const priorityB = statusPriority[b.status] || 99;
@@ -122,7 +184,7 @@ export default function ChapeiroScreen() {
 
   useEffect(() => {
     fetchPedidos(false);
-    const interval = setInterval(() => fetchPedidos(true), 15000);
+    const interval = setInterval(() => fetchPedidos(true), 5000);
     return () => clearInterval(interval);
   }, [fetchPedidos]);
 
@@ -188,7 +250,8 @@ export default function ChapeiroScreen() {
 
     return (
       <View key={pedido.id} style={[styles.card, isFinalizado && styles.cardDimmed]}>
-        <View>
+        {/* PARTE SUPERIOR (FLEX 1): Cresce para ocupar espaço, e permite scroll na lista */}
+        <View style={styles.cardTopContent}>
             <Text style={styles.cardTitle}>#{pedido.id}</Text>
             <View style={[styles.statusBadge, { borderColor: statusColor }]}>
                 <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
@@ -196,18 +259,26 @@ export default function ChapeiroScreen() {
 
             <View style={styles.itemsContainer}>
                 <Text style={styles.sectionTitle}>Descrição do pedido</Text>
-                {pedido.itens.map((item, index) => (
-                    <Text key={index} style={styles.itemText}>
-                        • {item.quantidade}x {item.nomeProduto}
-                    </Text>
-                ))}
+                
+                {/* AQUI ESTÁ A MUDANÇA: ScrollView para a lista de itens */}
+                <ScrollView 
+                    nestedScrollEnabled={true} 
+                    showsVerticalScrollIndicator={true}
+                    contentContainerStyle={{ paddingBottom: scale(10) }}
+                >
+                    {pedido.itens.map((item, index) => (
+                        <Text key={index} style={styles.itemText}>
+                            • {item.quantidade}x {item.nomeProduto}
+                        </Text>
+                    ))}
+                </ScrollView>
             </View>
         </View>
 
+        {/* PARTE INFERIOR: Fica fixa no rodapé do card */}
         <View>
-            {/* PAGAMENTO DETALHADO */}
             <View style={styles.paymentContainer}>
-                <Ionicons name={payInfo.icon as any} size={22} color={payInfo.color} />
+                <Ionicons name={payInfo.icon as any} size={scale(22)} color={payInfo.color} />
                 <Text style={[styles.paymentText, { color: payInfo.color }]}>
                     {payInfo.label}
                 </Text>
@@ -218,10 +289,7 @@ export default function ChapeiroScreen() {
                 <Text style={styles.totalValue}>R$ {pedido.total.toFixed(2).replace('.', ',')}</Text>
             </View>
 
-            <View style={styles.obsContainer}>
-                <Text style={styles.sectionTitle}>Observações:</Text>
-                <Text style={styles.obsText}>{pedido.observacao || "Nenhuma"}</Text>
-            </View>
+
 
             {!isFinalizado && (
                 <TouchableOpacity 
@@ -239,8 +307,6 @@ export default function ChapeiroScreen() {
   return (
     <LinearGradient
         colors={['#7E0000', '#520000']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 0 }}
         style={styles.container}
     >
       <View style={styles.header}>
@@ -253,9 +319,9 @@ export default function ChapeiroScreen() {
                       onPress={() => setShowDropdown(!showDropdown)}
                   >
                       <Text style={styles.alertText}>
-                          💰 Receber Dinheiro ({pagamentosPendentes.length})
+                          💰   Receber Dinheiro ({pagamentosPendentes.length})
                       </Text>
-                      <Ionicons name={showDropdown ? "chevron-up" : "chevron-down"} size={24} color="black" />
+                      <Ionicons name={showDropdown ? "chevron-up" : "chevron-down"} size={scale(24)} color="black" />
                   </TouchableOpacity>
                 </Animated.View>
             )}
@@ -265,7 +331,7 @@ export default function ChapeiroScreen() {
                 style={styles.settingsButton}
                 onPress={() => router.replace('/(protected)/definicaoProdutos')}
             >
-                <Ionicons name="options" size={24} color="#201000" />
+                <Ionicons name="options" size={scale(24)} color="#201000" />
                 <Text style={styles.settingsButtonText}>Produtos Disponíveis</Text>
             </TouchableOpacity>
         </View>
@@ -275,7 +341,7 @@ export default function ChapeiroScreen() {
         <View style={styles.headerRight}>
             <TouchableOpacity style={styles.logoffButton} onPress={handleSignOut}>
                 <Text style={styles.logoffText}>Logoff</Text>
-                <Ionicons name="log-out-outline" size={30} color="white" />
+                <Ionicons name="log-out-outline" size={scale(30)} color="white" />
             </TouchableOpacity>
         </View>
       </View>
@@ -283,7 +349,7 @@ export default function ChapeiroScreen() {
       {showDropdown && pagamentosPendentes.length > 0 && (
           <View style={styles.dropdownContainer}>
               <Text style={styles.dropdownHeaderTitle}>Pagamentos Pendentes</Text>
-              <ScrollView style={{maxHeight: 300}}>
+              <ScrollView style={{maxHeight: scale(300)}}>
                   {pagamentosPendentes.map(p => (
                       <View key={p.id} style={styles.dropdownItem}>
                           <View style={{flex: 1}}>
@@ -310,7 +376,6 @@ export default function ChapeiroScreen() {
         ) : (
             <ScrollView 
                 horizontal={true}
-                pagingEnabled={false}
                 contentContainerStyle={styles.scrollContent}
                 showsHorizontalScrollIndicator={false}
                 refreshControl={
@@ -339,268 +404,125 @@ export default function ChapeiroScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  mainTitleContainer: {
-      alignItems: 'center',
-      paddingTop: RFPercentage(2),
-      paddingBottom: 5,
-      backgroundColor: 'rgba(32, 16, 0, 0.3)', 
-      zIndex: 11,
-  },
-  mainTitle: {
-    color: 'white', 
-    fontSize: 40,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-  },
+  container: { flex: 1 },
+  mainTitle: { color: 'white', fontSize: scale(40), fontWeight: 'bold', letterSpacing: scale(2) },
+  
   header: {
-    height: RFPercentage(14),
+    height: scale(110), 
     backgroundColor: 'rgba(32, 16, 0, 0.6)', 
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: RFPercentage(2),
-    paddingVertical: RFPercentage(1),
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: scale(20), paddingVertical: scale(10),
     justifyContent: 'space-between',
   },
-  headerLeft: { 
-      flex: 1,
-      alignItems: 'flex-start',
-  },
-  notificationArea: {
-    flex: 1, 
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerRight: {
-      flex: 1, 
-      alignItems: 'flex-end',
-  },
+  headerLeft: { flex: 1, alignItems: 'flex-start' },
+  notificationArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  headerRight: { flex: 1, alignItems: 'flex-end' },
+  
   settingsButton: {
-    flexDirection: 'row',
-    backgroundColor: '#F39D0A', 
-    width: RFPercentage(23),
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    gap: 8
+    flexDirection: 'row', backgroundColor: '#F39D0A', width: scale(300),
+    justifyContent: 'center', paddingVertical: scale(8), paddingHorizontal: scale(10),
+    borderRadius: scale(10), alignItems: 'center', gap: scale(8)
   },
-  settingsButtonText: {
-      fontWeight: '500',
-      color: '#201000',
-      fontSize: 25
-  },
+  settingsButtonText: { fontWeight: '500', color: '#201000', fontSize: scale(20)}, 
+  
   logoffButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#A11613',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#A11613',
+    paddingVertical: scale(8), paddingHorizontal: scale(15), borderRadius: scale(10), gap: scale(8),
   },
-  logoffText: {
-    color: 'white',
-    fontWeight: '500',
-    fontSize: 25,
-  },
+  logoffText: { color: 'white', fontWeight: '500', fontSize: scale(25) },
+  
   alertButton: {
-    backgroundColor: '#F39D0A',
-    paddingVertical: 8,
-    width: RFPercentage(23),
-    borderRadius: RFPercentage(1),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    marginBottom: RFPercentage(1),
+    backgroundColor: '#F39D0A', paddingVertical: scale(8), width: scale(300),
+    borderRadius: scale(10), flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: scale(5), marginBottom: scale(10),
   },
-  alertText: {
-    color: 'black',
-    fontWeight: '500',
-    fontSize: 25,
-  },
+  alertText: { color: 'black', fontWeight: '500', fontSize: scale(18) }, 
+  
   dropdownContainer: {
-    position: 'absolute',
-    top: RFPercentage(8),
-    left: 0,
-    alignSelf: 'center',
-    width: '50%', 
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 15,
-    zIndex: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    position: 'absolute', top: scale(80), left: 0, alignSelf: 'center',
+    width: '50%', backgroundColor: 'white', borderRadius: scale(15), padding: scale(15),
+    zIndex: 20, shadowColor: '#000', shadowOffset: { width: 0, height: scale(10) },
+    shadowOpacity: 0.5, shadowRadius: scale(10), elevation: 20, borderWidth: 1, borderColor: '#ccc',
   },
   dropdownHeaderTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      textAlign: 'center',
-      marginBottom: 15,
-      color: '#201000',
-      textTransform: 'uppercase',
-      borderBottomWidth: 1,
-      borderBottomColor: '#eee',
-      paddingBottom: 10
+      fontSize: scale(18), fontWeight: 'bold', textAlign: 'center', marginBottom: scale(15),
+      color: '#201000', textTransform: 'uppercase', borderBottomWidth: 1,
+      borderBottomColor: '#eee', paddingBottom: scale(10)
   },
   dropdownItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: scale(12), paddingHorizontal: scale(10), borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0', backgroundColor: '#fff',
   },
-  dropdownTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  dropdownValue: { fontSize: 16, color: '#666', marginTop: 2 },
+  dropdownTitle: { fontSize: scale(18), fontWeight: 'bold', color: '#333' },
+  dropdownValue: { fontSize: scale(16), color: '#666', marginTop: scale(2) },
+  
   confirmButton: {
-    backgroundColor: '#28a745',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
+    backgroundColor: '#28a745', paddingVertical: scale(10), paddingHorizontal: scale(15), borderRadius: scale(8),
   },
-  confirmButtonText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
-
-  body: {
-    flex: 1,
-    justifyContent: 'center',
-  },
+  confirmButtonText: { color: 'white', fontWeight: 'bold', fontSize: scale(14) },
+  
+  body: { flex: 1, justifyContent: 'center' },
   scrollContent: {
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    gap: 20,
-    flexGrow: 1,
-    justifyContent: 'center',
+    paddingHorizontal: scale(20), alignItems: 'center', gap: scale(20), flexGrow: 1, justifyContent: 'center',
   },
-  emptyContainer: {
-      width: Dimensions.get('window').width,
-      alignItems: 'center',
-      justifyContent: 'center',
-  },
-  emptyText: {
-    color: 'white',
-    fontSize: 20,
-    textAlign: 'center',
-    opacity: 0.8
-  },
+  emptyContainer: { width: Dimensions.get('window').width, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { color: 'white', fontSize: scale(20), textAlign: 'center', opacity: 0.8 },
+  
   card: {
-    width: 320,
-    height: '80%',
-    backgroundColor: 'white',
-    borderRadius: 25,
-    padding: 20,
-    justifyContent: 'space-between',
+    width: scale(320), 
+    height: '90%', 
+    backgroundColor: 'white', borderRadius: scale(25),
+    padding: scale(20), 
+    justifyContent: 'space-between', // Mantém Header em cima, Footer embaixo
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-    marginVertical: 20,
+    shadowOffset: { width: 0, height: scale(5) }, shadowOpacity: 0.3, shadowRadius: scale(5),
+    elevation: 5, marginVertical: scale(20),
   },
-  cardDimmed: {
-    backgroundColor: '#e0e0e0',
-    opacity: 0.9,
+  
+  // NOVO ESTILO: Container Superior Flexível
+  cardTopContent: {
+    flex: 1, // Ocupa todo o espaço sobrando
+    overflow: 'hidden', // Evita que texto vaze por cima do footer
   },
-  cardTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
+
+  cardDimmed: { backgroundColor: '#e0e0e0', opacity: 0.9 },
+  cardTitle: { fontSize: scale(32), fontWeight: 'bold', textAlign: 'center', marginBottom: scale(10) },
+  
   statusBadge: {
-    borderWidth: 2,
-    borderRadius: 20,
-    paddingVertical: 5,
-    paddingHorizontal: 15,
-    alignSelf: 'center',
-    marginBottom: 15,
+    borderWidth: 2, borderRadius: scale(20), paddingVertical: scale(5), paddingHorizontal: scale(15),
+    alignSelf: 'center', marginBottom: scale(15),
   },
-  statusText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
+  statusText: { fontSize: scale(16), fontWeight: 'bold', textTransform: 'uppercase' },
+  
+  itemsContainer: { 
+    flex: 1, // Permite que a view da descrição cresça
+    marginBottom: scale(5) 
   },
-  itemsContainer: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    textDecorationLine: 'underline',
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  itemText: {
-    fontSize: 18,
-    marginBottom: 5,
-    fontWeight: 'bold',
-    color: '#333',
-  },
+  
+  sectionTitle: { fontSize: scale(18), textDecorationLine: 'underline', marginBottom: scale(8), fontWeight: '600' },
+  itemText: { fontSize: scale(18), marginBottom: scale(5), fontWeight: 'bold', color: '#333' },
+  
   paymentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    marginBottom: 5,
-    paddingVertical: 5,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: scale(5), marginBottom: scale(5), paddingVertical: scale(5), backgroundColor: '#f9f9f9', borderRadius: scale(10),
   },
-  paymentText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  paymentText: { fontSize: scale(16), fontWeight: 'bold' },
+  
   totalContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      borderTopWidth: 1,
-      borderTopColor: '#eee',
-      paddingTop: 10,
-      marginBottom: 10
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      borderTopWidth: 1, borderTopColor: '#eee', paddingTop: scale(10), marginBottom: scale(10)
   },
-  totalLabel: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#333'
-  },
-  totalValue: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: '#A11613',
-  },
-  obsContainer: {
-    marginBottom: 15,
-    minHeight: 50,
-  },
-  obsText: {
-    fontSize: 16,
-    fontStyle: 'italic',
-    color: '#555',
-  },
+  totalLabel: { fontSize: scale(18), fontWeight: 'bold', color: '#333' },
+  totalValue: { fontSize: scale(20), fontWeight: 'bold', color: '#A11613' },
+  
+  obsContainer: { marginBottom: scale(15), minHeight: scale(50) },
+  obsText: { fontSize: scale(16), fontStyle: 'italic', color: '#555' },
+  
   actionButton: {
-    paddingVertical: 15,
-    borderRadius: 30,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 3,
+    paddingVertical: scale(15), borderRadius: scale(30), alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: scale(3) },
+    shadowOpacity: 0.3, shadowRadius: scale(3), elevation: 3,
   },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
+  actionButtonText: { color: 'white', fontSize: scale(20), fontWeight: 'bold' },
 });

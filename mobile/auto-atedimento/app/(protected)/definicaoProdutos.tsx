@@ -1,33 +1,97 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Dimensions, ImageSourcePropType } from 'react-native';
-import { router } from 'expo-router';
+import React, { useCallback, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, ImageSourcePropType, Alert, Dimensions } from 'react-native';
+import { api } from '../../lib/api'; 
+import { router, useFocusEffect } from 'expo-router'; 
 import { Ionicons } from '@expo/vector-icons';
-import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
-import { useProdutos, Produto } from '../../hooks/useProdutos'; // Importe seu hook
+import * as ScreenOrientation from 'expo-screen-orientation';
 
-// --- Helpers Visuais (Mesma lógica da Home para manter padrão) ---
+// --- LÓGICA DE ESCALA MATEMÁTICA (A MESMA DA TELA DO CHAPEIRO) ---
+const { width, height } = Dimensions.get('window');
+const realWidth = width > height ? width : height;
+const guidelineBaseWidth = 1366; // Base do iPad Pro
+const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
+// ------------------------------------------------------------------
+
+interface Produto {
+  id: number;
+  nome: string;
+  preco: number;
+  ativo: number; 
+  categoriaId: number;
+}
+
 const lancheImage = require('../../assets/images/lanche1.jpg');
-const comboImage = require('../../assets/images/combos.jpg');
+const comboImage = require('../../assets/images/fritas.jpg');
 const bebidaImage = require('../../assets/images/bebida1.jpg');
 
 const getImageForItem = (categoriaId: number): ImageSourcePropType => {
   switch (categoriaId) {
-    case 1: return lancheImage; // Lanches
-    case 2: return comboImage;  // Combos
-    case 3: return bebidaImage; // Bebidas
+    case 1: return lancheImage;
+    case 2: return comboImage; 
+    case 3: return bebidaImage;
     default: return lancheImage;
   }
 };
 
 const formatPrice = (price: number): string => {
-    // OBS: Se seu banco salva em centavos (ex: 2000), divida por 100 aqui.
-    // Se já salva em reais (ex: 20.00), mantenha como está.
     const valorReal = price > 100 ? price / 100 : price; 
     return `R$ ${valorReal.toFixed(2).replace('.', ',')}`;
 };
 
-export default function definicaoProdutos() {
-    const { produtos, loading, toggleAtivo } = useProdutos();
+export default function DefinicaoProdutos() {
+    const [produtos, setProdutos] = useState<Produto[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useFocusEffect(
+        useCallback(() => {
+            const lockLandscape = async () => {
+                await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+            };
+            lockLandscape();
+
+        }, [])
+    );
+
+    const fetchProdutos = async () => {
+        try {
+            setLoading(true);
+            const data = await api('/api/produtos', { auth: true }) as Produto[];
+            data.sort((a, b) => a.id - b.id);
+            setProdutos(data);
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Erro', 'Não foi possível carregar o estoque.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProdutos();
+    }, []);
+
+    const toggleAtivo = async (id: number, statusAtual: number | string) => {
+        const statusNumerico = Number(statusAtual);
+        const novoStatus = statusNumerico === 1 ? 0 : 1;
+
+        try {
+            setProdutos(prev => prev.map(p => 
+                p.id === id ? { ...p, ativo: novoStatus } : p
+            ));
+
+            await api(`/api/produtos/${id}/status`, {
+                method: 'PATCH',
+                auth: true,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ativo: novoStatus })
+            });
+
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Erro', 'Falha ao atualizar status.');
+            fetchProdutos(); 
+        }
+    };
 
     if (loading) {
         return (
@@ -39,17 +103,15 @@ export default function definicaoProdutos() {
     }
 
     const renderProdutoCard = (produto: Produto) => {
-        const isAtivo = produto.ativo;
+        const isAtivo = Number(produto.ativo) === 1;
         
         return (
             <TouchableOpacity 
                 key={produto.id} 
-                // Aplica estilo "cardInativo" se não estiver ativo
                 style={[styles.card, !isAtivo && styles.cardInativo]}
-                onPress={() => toggleAtivo(produto.id, isAtivo)}
+                onPress={() => toggleAtivo(produto.id, produto.ativo)}
                 activeOpacity={0.8}
             >
-                {/* Imagem com opacidade reduzida se inativo */}
                 <Image 
                     source={getImageForItem(produto.categoriaId)} 
                     style={[styles.cardImage, !isAtivo && { opacity: 0.4 }]} 
@@ -70,11 +132,12 @@ export default function definicaoProdutos() {
                             styles.statusBadge, 
                             { backgroundColor: isAtivo ? "#28a745" : "#555" }
                         ]}>
+                            {/* Ajuste no tamanho do ícone com scale */}
                             <Ionicons 
                                 name={isAtivo ? "eye" : "eye-off"} 
-                                size={12} 
+                                size={scale(12)} 
                                 color="white" 
-                                style={{marginRight: 4}} 
+                                style={{marginRight: scale(4)}} 
                             />
                             <Text style={styles.statusText}>
                                 {isAtivo ? "ATIVO" : "INATIVO"}
@@ -83,10 +146,11 @@ export default function definicaoProdutos() {
                     </View>
                 </View>
 
-                {/* Ícone grande de bloqueio sobreposto se inativo */}
+                {/* Overlay de Inativo */}
                 {!isAtivo && (
                     <View style={styles.inactiveOverlay}>
-                        <Ionicons name="lock-closed" size={40} color="rgba(255,255,255,0.8)" />
+                        {/* Ajuste no tamanho do ícone com scale */}
+                        <Ionicons name="lock-closed" size={scale(40)} color="rgba(255,255,255,0.8)" />
                         <Text style={styles.inactiveText}>INDISPONÍVEL</Text>
                     </View>
                 )}
@@ -102,12 +166,12 @@ export default function definicaoProdutos() {
                     <Text style={styles.headerTitle}>Gerenciar Produtos</Text>
                 </View>
                 
-                {/* Botão Vice-Versa (Ir para Pedidos) */}
                 <TouchableOpacity 
                     style={styles.navButton} 
                     onPress={() => router.replace('/(protected)/telaChapeiro')}
                 >
-                    <Ionicons name="arrow-back" size={30} color="black" />
+                    {/* Ajuste no tamanho do ícone com scale */}
+                    <Ionicons name="arrow-back" size={scale(30)} color="black" />
                     <Text style={styles.navButtonText}>Fila de Pedidos</Text>
                 </TouchableOpacity>
             </View>
@@ -124,43 +188,41 @@ export default function definicaoProdutos() {
     );
 }
 
+// --- ESTILOS COM SCALE APLICADO ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f0f0f0' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#201000' },
-    loadingText: { color: 'white', marginTop: 10, fontSize: 16 },
+    loadingText: { color: 'white', marginTop: scale(10), fontSize: scale(16) },
     
     // Header
     header: {
-        height: RFPercentage(12),
+        height: scale(100), // Altura ajustada proporcionalmente
         backgroundColor: '#201000',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingBottom: 15,
-        paddingHorizontal: 20,
-        zIndex: 10,
+        paddingHorizontal: scale(20),
     },
-    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-    backButton: { padding: 0 },
-    headerTitle: { fontSize: RFPercentage(4), fontWeight: 'bold', color: 'white' },
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(15) },
+    headerTitle: { fontSize: scale(32), fontWeight: 'bold', color: 'white' },
     
     navButton: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#F39D0A',
-        paddingVertical: 8,
-        paddingHorizontal: RFPercentage(1.5),
-        borderRadius: RFPercentage(1),
-        gap: RFPercentage(1),
+        paddingVertical: scale(8),
+        paddingHorizontal: scale(15),
+        borderRadius: scale(8),
+        gap: scale(8),
         position: 'absolute',
-        left: RFPercentage(2),
-        bottom: RFPercentage(1),
+        left: scale(20),
+        // bottom: scale(20),
     },
-    navButtonText: { fontSize: 25, fontWeight: '500', color: 'black' },
+    navButtonText: { fontSize: scale(20), fontWeight: '500', color: 'black' },
 
     // Content
-    scrollContent: { padding: 15, paddingBottom: 50 },
-    helperText: { textAlign: 'center', color: '#666', marginBottom: 20, fontStyle: 'italic' },
+    scrollContent: { padding: scale(15), paddingBottom: scale(50) },
+    helperText: { textAlign: 'center', color: '#666', marginBottom: scale(20), fontStyle: 'italic', fontSize: scale(16) },
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -169,14 +231,14 @@ const styles = StyleSheet.create({
 
     // Card
     card: {
-        width: '48%', // 2 colunas
+        width: '48%', // Mantido % para garantir 2 colunas no grid, mas o interior escala
         backgroundColor: 'white',
-        borderRadius: 15,
-        marginBottom: 15,
+        borderRadius: scale(15),
+        marginBottom: scale(15),
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: scale(2) },
         shadowOpacity: 0.15,
-        shadowRadius: 4,
+        shadowRadius: scale(4),
         elevation: 4,
         overflow: 'hidden',
         position: 'relative',
@@ -184,23 +246,23 @@ const styles = StyleSheet.create({
         borderColor: 'transparent',
     },
     cardInativo: {
-        backgroundColor: '#e0e0e0', // Fundo cinza
+        backgroundColor: '#e0e0e0',
         borderColor: '#999',
         borderStyle: 'dashed',
     },
     cardImage: {
         width: '100%',
-        height: 130,
+        height: scale(130), // Altura da imagem escala
         resizeMode: 'cover',
     },
     cardContent: {
-        padding: 12,
+        padding: scale(12),
     },
     cardTitle: {
-        fontSize: 16,
+        fontSize: scale(16),
         fontWeight: 'bold',
         color: '#201000',
-        marginBottom: 6,
+        marginBottom: scale(6),
     },
     rowPriceStatus: {
         flexDirection: 'row',
@@ -208,25 +270,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cardPrice: {
-        fontSize: 15,
+        fontSize: scale(15),
         color: '#A11613',
         fontWeight: 'bold',
     },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        borderRadius: 8,
+        paddingVertical: scale(4),
+        paddingHorizontal: scale(8),
+        borderRadius: scale(8),
     },
     statusText: {
         color: 'white',
-        fontSize: 10,
+        fontSize: scale(10),
         fontWeight: 'bold',
     },
     inactiveOverlay: {
-        ...StyleSheet.absoluteFillObject, // Cobre o card todo
-        backgroundColor: 'rgba(0,0,0,0.05)', // Levemente escuro
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.05)',
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 2,
@@ -234,7 +296,8 @@ const styles = StyleSheet.create({
     inactiveText: {
         color: 'white',
         fontWeight: 'bold',
-        marginTop: 5,
+        fontSize: scale(14),
+        marginTop: scale(5),
         textShadowColor: 'rgba(0, 0, 0, 0.75)',
         textShadowOffset: {width: -1, height: 1},
         textShadowRadius: 5
