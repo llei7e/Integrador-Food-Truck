@@ -6,14 +6,22 @@ import {
     TouchableOpacity,
     TextInput,
     ActivityIndicator,
+    Dimensions,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
-import { RFPercentage } from 'react-native-responsive-fontsize';
-import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
+
+// --- LÓGICA DE ESCALA MATEMÁTICA (VERTICAL) ---
+const { width, height } = Dimensions.get('window');
+// Garante que pegamos a menor dimensão (largura em modo retrato)
+const realWidth = width < height ? width : height; 
+// 768px é a largura base de um iPad/Tablet padrão em Retrato.
+const guidelineBaseWidth = 768; 
+const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
+// -------------------------------------
 
 const isEmailValid = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -102,11 +110,7 @@ export default function Login() {
         if (!isRegisterFormValid) return;
         setSubmitting(true);
         try {
-            // --- AQUI: ENVIANDO O CARGO USUARIO ---
-            // Como só existe a opção USUARIO disponível para cadastro público, fixamos aqui.
-            // Se você quisesse um select, seria uma variável de estado.
             const defaultRole = "USUARIO"; 
-            
             await signUp(nome.trim(), email.trim().toLowerCase(), password, defaultRole);
         } catch (e: any) {
             if (e?.status === 409) setErrorMessage('Este e-mail já está cadastrado.');
@@ -143,6 +147,8 @@ export default function Login() {
         <>
             <Stack.Screen options={{ headerShown: false }} />
             <LinearGradient colors={['#7E0000', '#520000']} style={styles.containerFull}>
+                
+                {/* Parte Superior (Logo e Texto) */}
                 <View style={styles.higher}>
                     <View style={styles.headerTexts}>
                         <Text style={styles.headerText}>Seja Bem Vindo!</Text>
@@ -151,6 +157,7 @@ export default function Login() {
                     <Image source={require('../../assets/images/Logo.png')} style={styles.logo} resizeMode="contain" />
                 </View>
 
+                {/* Card Branco Inferior */}
                 <View style={styles.lower}>
                     <View style={styles.LoginRegister}>
                         <TouchableOpacity style={[styles.tabButton, activeTab === 'login' ? styles.tabActive : styles.tabInactiveLeft]} onPress={() => { setActiveTab('login'); setErrorMessage(null); }}>
@@ -167,12 +174,12 @@ export default function Login() {
                             <View style={styles.inputs}>
                                 <View style={styles.inputContainer}>
                                     <TextInput style={styles.input} placeholder="Digite seu e-mail" placeholderTextColor="#999" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={handleEmailChange} />
-                                    <Ionicons name="mail-outline" size={RFPercentage(4)} color="#555" style={styles.icon} />
+                                    <Ionicons name="mail-outline" size={scale(28)} color="#555" style={styles.icon} />
                                 </View>
                                 <View style={styles.inputContainer}>
                                     <TextInput style={styles.input} placeholder="Digite sua senha" placeholderTextColor="#999" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
                                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={RFPercentage(4)} color="#A11613" style={styles.icon} />
+                                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={scale(28)} color="#A11613" style={styles.icon} />
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -196,7 +203,7 @@ export default function Login() {
                             <View style={styles.fieldContainer}>
                                 <View style={styles.inputContainer}>
                                     <TextInput style={styles.input} placeholder="Nome" placeholderTextColor="#999" value={nome} onChangeText={handleNomeChange} />
-                                    <Ionicons name="person-outline" size={RFPercentage(4)} color="#555" style={styles.icon} />
+                                    <Ionicons name="person-outline" size={scale(28)} color="#555" style={styles.icon} />
                                 </View>
                                 <View style={styles.realTimeErrorContainer}>
                                     {registrationErrors.nome && <Text style={styles.realTimeErrorText}>{registrationErrors.nome}</Text>}
@@ -206,7 +213,7 @@ export default function Login() {
                             <View style={styles.fieldContainer}>
                                 <View style={styles.inputContainer}>
                                     <TextInput style={styles.input} placeholder="Digite seu e-mail" placeholderTextColor="#999" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={handleEmailChange} />
-                                    <Ionicons name="mail-outline" size={RFPercentage(4)} color="#555" style={styles.icon} />
+                                    <Ionicons name="mail-outline" size={scale(28)} color="#555" style={styles.icon} />
                                 </View>
                                 <View style={styles.realTimeErrorContainer}>
                                     {registrationErrors.email && <Text style={styles.realTimeErrorText}>{registrationErrors.email}</Text>}
@@ -217,7 +224,7 @@ export default function Login() {
                                 <View style={styles.inputContainer}>
                                     <TextInput style={styles.input} placeholder="Digite sua senha" placeholderTextColor="#999" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
                                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={RFPercentage(4)} color="#A11613" style={styles.icon} />
+                                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={scale(28)} color="#A11613" style={styles.icon} />
                                     </TouchableOpacity>
                                 </View>
                                 <View style={styles.realTimeErrorContainer}>
@@ -225,7 +232,6 @@ export default function Login() {
                                 </View>
                             </View>
 
-                            {/* Campo de Cargo (Visualmente apenas informativo, já que só tem 1 opção) */}
                             <View style={styles.fieldContainer}>
                                 <View style={[styles.inputContainer, { backgroundColor: '#f0f0f0', borderBottomColor: '#aaa' }]}>
                                     <TextInput 
@@ -233,7 +239,7 @@ export default function Login() {
                                         value="Cargo: USUÁRIO" 
                                         editable={false} 
                                     />
-                                    <Ionicons name="briefcase-outline" size={RFPercentage(4)} color="#999" style={styles.icon} />
+                                    <Ionicons name="briefcase-outline" size={scale(28)} color="#999" style={styles.icon} />
                                 </View>
                             </View>
 
@@ -250,131 +256,149 @@ export default function Login() {
 
 const styles = StyleSheet.create({
     containerFull: { flex: 1, backgroundColor: '#EFEAEA' },
-    logo: { height: RFPercentage(16), width: RFPercentage(16) },
-    logoGoogle: { 
-        height: RFPercentage(10), 
-        width: RFPercentage(10), 
-        borderRadius: 30, 
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.4,
-        shadowRadius: 3
+    
+    // HEADER
+    higher: {
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        height: '30%', // Mantém a proporção da tela original
     },
+    headerTexts: { gap: scale(10) },
+    headerText: {
+        color: 'white',
+        fontSize: scale(35),
+        fontWeight: '400',
+        textShadowColor: 'black',
+        textShadowOffset: { width: 1, height: 2 },
+        textShadowRadius: 2,
+    },
+    logo: { 
+        height: scale(180), 
+        width: scale(180) 
+    },
+
+    // CONTAINER BRANCO (CARD)
+    lower: {
+        backgroundColor: '#fffbfb',
+        width: '70%', // Mantém a largura de 70% da tela, como no seu design
+        paddingVertical: scale(50),
+        alignSelf: 'center',
+        borderRadius: scale(40),
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: scale(50)
+    },
+
+    // ABAS (Login/Cadastro)
     LoginRegister: {
         flexDirection: 'row',
         backgroundColor: '#ddd',
-        borderRadius: RFPercentage(6),
-        gap: RFPercentage(1),
+        borderRadius: scale(50),
+        gap: scale(10),
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: 0, height: scale(3) },
         shadowOpacity: 0.3,
         shadowRadius: 4,
+        marginBottom: scale(20),
     },
     tabButton: {
-        flex: 1,
-        paddingVertical: RFPercentage(2.5),
-        paddingHorizontal: wp(4),
+        paddingVertical: scale(20),
+        paddingHorizontal: scale(30),
         alignItems: 'center',
         backgroundColor: '#ddd',
+        borderRadius: scale(50), // Garante o formato de pílula
     },
     tabActive: {
         backgroundColor: '#7E0000',
-        borderRadius: RFPercentage(5),
-    paddingHorizontal: wp(6),
+        borderRadius: scale(50),
+        paddingHorizontal: scale(40),
         shadowColor: '#000',
         shadowOffset: { width: 3, height: 3 },
         shadowOpacity: 0.3,
         shadowRadius: 4,
     },
     tabInactiveLeft: {
-        borderTopLeftRadius: RFPercentage(5),
-        borderBottomLeftRadius: RFPercentage(5),
+        borderTopLeftRadius: scale(50),
+        borderBottomLeftRadius: scale(50),
     },
     tabInactiveRight: {
-        borderTopRightRadius: RFPercentage(5),
-        borderBottomRightRadius: RFPercentage(5),
+        borderTopRightRadius: scale(50),
+        borderBottomRightRadius: scale(50),
     },
-    tabText: { fontSize: RFPercentage(2.5), fontWeight: '500', color: '#333' },
+    tabText: { fontSize: scale(25), fontWeight: '500', color: '#333' },
     tabTextActive: { color: '#fff' },
+
+    // FORMULÁRIOS
     formContainer: { width: '80%', alignItems: 'center'},
-    inputs: { gap: RFPercentage(2), width: '100%', alignItems: 'center', marginTop: RFPercentage(3), },
+    inputs: { gap: scale(20), width: '100%', alignItems: 'center', marginTop: scale(20) },
+    
+    fieldContainer: { width: '100%', gap: scale(8), marginBottom: scale(10) },
+    
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderBottomWidth: RFPercentage(0.4),
+        borderBottomWidth: scale(3), // Borda proporcional
         borderBottomColor: '#7E0000',
         width: '100%',
     },
     input: {
         flex: 1,
-        fontSize: RFPercentage(2.5),
+        fontSize: scale(20),
         color: '#000',
-        marginTop: RFPercentage(2),
-    paddingVertical: RFPercentage(1),
+        marginTop: scale(10),
+        paddingVertical: scale(10),
     },
-    icon: { marginHorizontal: wp(1.5) },
+    icon: { marginHorizontal: scale(10) },
+
+    // BOTÕES
+    buttonsContainer:{ 
+        width: '100%',
+        flexDirection: 'row', 
+        justifyContent: 'space-between',
+        alignItems: 'center', 
+        marginTop: scale(25)
+    },
     submitButton: {
-        marginTop: RFPercentage(3),
-        width: RFPercentage(28),
+        marginTop: scale(20),
+        width: scale(200),
         backgroundColor: '#7E0000',
-        paddingVertical: RFPercentage(2),
-        borderRadius: RFPercentage(6),
+        paddingVertical: scale(20),
+        borderRadius: scale(50),
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 5, height: 5 },
         shadowOpacity: 0.4,
         shadowRadius: 6,
     },
-    submitText: { color: '#fff', fontSize: RFPercentage(2.5), fontWeight: 'bold' },
+    submitText: { color: '#fff', fontSize: scale(25), fontWeight: 'bold' },
+    
+    logoGoogle: { 
+        height: scale(70), 
+        width: scale(70), 
+        borderRadius: scale(20), 
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.4,
+        shadowRadius: 3
+    },
+
+    // ERROS
     errorContainer: {
-    marginTop: RFPercentage(1),
+        marginTop: scale(10),
         width: '100%',
         justifyContent: 'center',
-        alignItems: 'flex-start',
+        alignItems: 'center',
     },
     errorText: {
         color: '#D32F2F',
-        fontSize: RFPercentage(1.8),
+        fontSize: scale(14),
         textAlign: 'center',
         fontWeight: '500',
     },
-    higher: {
-        width: '100%',
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        alignItems: 'center',
-        height: '25%',
-    },
-    lower: {
-        marginTop: RFPercentage(0),
-        backgroundColor: '#fffbfb',
-        width: '70%',
-        paddingVertical: RFPercentage(8),
-        marginHorizontal: '15%',
-        borderRadius: RFPercentage(5),
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: RFPercentage(3),
-    },
-    headerText: {
-        color: 'white',
-        fontSize: RFPercentage(3.5),
-        fontWeight: '400',
-        textShadowColor: 'black',
-        textShadowOffset: { width: 1, height: 2 },
-        textShadowRadius: 2,
-    },
-    headerTexts: { gap: RFPercentage(1.2) },
-    fieldContainer: { width: '100%', gap: RFPercentage(1.5) },
     realTimeErrorContainer: {
         justifyContent: 'center',
     },
-    realTimeErrorText: { color: '#D32F2F', fontSize: RFPercentage(1.7) },
-    buttonsContainer:{ 
-        width: '100%',
-        flexDirection: 'row', 
-        justifyContent: 'space-between',
-        alignItems: 'center', 
-        marginTop: RFPercentage(3)
-    }
+    realTimeErrorText: { color: '#D32F2F', fontSize: scale(12) },
 });
