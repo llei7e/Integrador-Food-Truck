@@ -1,12 +1,17 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, ImageSourcePropType, Alert } from 'react-native';
-import { api } from '../../lib/api'; // Importando a API conforme sua lógica
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, ImageSourcePropType, Alert, Dimensions } from 'react-native';
+import { api } from '../../lib/api'; 
 import { router, useFocusEffect } from 'expo-router'; 
 import { Ionicons } from '@expo/vector-icons';
-import { RFPercentage } from 'react-native-responsive-fontsize';
 import * as ScreenOrientation from 'expo-screen-orientation';
 
-// --- Interface (ativo é number: 0 ou 1) ---
+// --- LÓGICA DE ESCALA MATEMÁTICA (A MESMA DA TELA DO CHAPEIRO) ---
+const { width, height } = Dimensions.get('window');
+const realWidth = width > height ? width : height;
+const guidelineBaseWidth = 1366; // Base do iPad Pro
+const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
+// ------------------------------------------------------------------
+
 interface Produto {
   id: number;
   nome: string;
@@ -15,9 +20,8 @@ interface Produto {
   categoriaId: number;
 }
 
-// --- Helpers Visuais ---
 const lancheImage = require('../../assets/images/lanche1.jpg');
-const comboImage = require('../../assets/images/combos.jpg');
+const comboImage = require('../../assets/images/fritas.jpg');
 const bebidaImage = require('../../assets/images/bebida1.jpg');
 
 const getImageForItem = (categoriaId: number): ImageSourcePropType => {
@@ -35,11 +39,9 @@ const formatPrice = (price: number): string => {
 };
 
 export default function DefinicaoProdutos() {
-    // 1. ESTADO LOCAL (Substituindo o hook useProdutos pela sua lógica que funciona)
     const [produtos, setProdutos] = useState<Produto[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // 2. ORIENTAÇÃO (Travando em Paisagem)
     useFocusEffect(
         useCallback(() => {
             const lockLandscape = async () => {
@@ -47,21 +49,14 @@ export default function DefinicaoProdutos() {
             };
             lockLandscape();
 
-            return () => {
-                ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-            };
         }, [])
     );
 
-    // 3. BUSCAR PRODUTOS (Lógica da API)
     const fetchProdutos = async () => {
         try {
             setLoading(true);
             const data = await api('/api/produtos', { auth: true }) as Produto[];
-            
-            // ALTERADO AQUI: Ordenação por ID Ascendente (a.id - b.id)
             data.sort((a, b) => a.id - b.id);
-            
             setProdutos(data);
         } catch (error) {
             console.error(error);
@@ -75,21 +70,15 @@ export default function DefinicaoProdutos() {
         fetchProdutos();
     }, []);
 
-    // 4. TOGGLE 0/1 (Lógica de Atualização Otimista + API Patch)
     const toggleAtivo = async (id: number, statusAtual: number | string) => {
-        // 1. Converte o que vier (texto ou número) para número puro
         const statusNumerico = Number(statusAtual);
-
-        // 2. Se for 1 vira 0, caso contrário vira 1
         const novoStatus = statusNumerico === 1 ? 0 : 1;
 
         try {
-            // Atualiza UI Otimista
             setProdutos(prev => prev.map(p => 
                 p.id === id ? { ...p, ativo: novoStatus } : p
             ));
 
-            // Chama API
             await api(`/api/produtos/${id}/status`, {
                 method: 'PATCH',
                 auth: true,
@@ -100,7 +89,7 @@ export default function DefinicaoProdutos() {
         } catch (error) {
             console.error(error);
             Alert.alert('Erro', 'Falha ao atualizar status.');
-            fetchProdutos(); // Reverte em caso de erro
+            fetchProdutos(); 
         }
     };
 
@@ -114,16 +103,12 @@ export default function DefinicaoProdutos() {
     }
 
     const renderProdutoCard = (produto: Produto) => {
-        // Converte 0/1 para booleano visual APENAS para o estilo
-        // Garante que funciona se vier texto "1", número 1 ou booleano true
         const isAtivo = Number(produto.ativo) === 1;
         
         return (
             <TouchableOpacity 
                 key={produto.id} 
-                // Estilo baseado no booleano
                 style={[styles.card, !isAtivo && styles.cardInativo]}
-                // Ação passa o status numérico atual (0 ou 1)
                 onPress={() => toggleAtivo(produto.id, produto.ativo)}
                 activeOpacity={0.8}
             >
@@ -147,11 +132,12 @@ export default function DefinicaoProdutos() {
                             styles.statusBadge, 
                             { backgroundColor: isAtivo ? "#28a745" : "#555" }
                         ]}>
+                            {/* Ajuste no tamanho do ícone com scale */}
                             <Ionicons 
                                 name={isAtivo ? "eye" : "eye-off"} 
-                                size={12} 
+                                size={scale(12)} 
                                 color="white" 
-                                style={{marginRight: 4}} 
+                                style={{marginRight: scale(4)}} 
                             />
                             <Text style={styles.statusText}>
                                 {isAtivo ? "ATIVO" : "INATIVO"}
@@ -163,7 +149,8 @@ export default function DefinicaoProdutos() {
                 {/* Overlay de Inativo */}
                 {!isAtivo && (
                     <View style={styles.inactiveOverlay}>
-                        <Ionicons name="lock-closed" size={40} color="rgba(255,255,255,0.8)" />
+                        {/* Ajuste no tamanho do ícone com scale */}
+                        <Ionicons name="lock-closed" size={scale(40)} color="rgba(255,255,255,0.8)" />
                         <Text style={styles.inactiveText}>INDISPONÍVEL</Text>
                     </View>
                 )}
@@ -179,12 +166,12 @@ export default function DefinicaoProdutos() {
                     <Text style={styles.headerTitle}>Gerenciar Produtos</Text>
                 </View>
                 
-                {/* Botão Vice-Versa (Ir para Pedidos) */}
                 <TouchableOpacity 
                     style={styles.navButton} 
                     onPress={() => router.replace('/(protected)/telaChapeiro')}
                 >
-                    <Ionicons name="arrow-back" size={30} color="black" />
+                    {/* Ajuste no tamanho do ícone com scale */}
+                    <Ionicons name="arrow-back" size={scale(30)} color="black" />
                     <Text style={styles.navButtonText}>Fila de Pedidos</Text>
                 </TouchableOpacity>
             </View>
@@ -201,44 +188,41 @@ export default function DefinicaoProdutos() {
     );
 }
 
-// --- STYLES (Exatamente o seu design original) ---
+// --- ESTILOS COM SCALE APLICADO ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f0f0f0' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#201000' },
-    loadingText: { color: 'white', marginTop: 10, fontSize: 16 },
+    loadingText: { color: 'white', marginTop: scale(10), fontSize: scale(16) },
     
     // Header
     header: {
-        height: RFPercentage(12),
+        height: scale(100), // Altura ajustada proporcionalmente
         backgroundColor: '#201000',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingBottom: 15,
-        paddingHorizontal: 20,
-        zIndex: 10,
+        paddingHorizontal: scale(20),
     },
-    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-    backButton: { padding: 0 },
-    headerTitle: { fontSize: RFPercentage(4), fontWeight: 'bold', color: 'white' },
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(15) },
+    headerTitle: { fontSize: scale(32), fontWeight: 'bold', color: 'white' },
     
     navButton: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#F39D0A',
-        paddingVertical: 8,
-        paddingHorizontal: RFPercentage(1.5),
-        borderRadius: RFPercentage(1),
-        gap: RFPercentage(1),
+        paddingVertical: scale(8),
+        paddingHorizontal: scale(15),
+        borderRadius: scale(8),
+        gap: scale(8),
         position: 'absolute',
-        left: RFPercentage(2),
-        bottom: RFPercentage(1),
+        left: scale(20),
+        // bottom: scale(20),
     },
-    navButtonText: { fontSize: 25, fontWeight: '500', color: 'black' },
+    navButtonText: { fontSize: scale(20), fontWeight: '500', color: 'black' },
 
     // Content
-    scrollContent: { padding: 15, paddingBottom: 50 },
-    helperText: { textAlign: 'center', color: '#666', marginBottom: 20, fontStyle: 'italic' },
+    scrollContent: { padding: scale(15), paddingBottom: scale(50) },
+    helperText: { textAlign: 'center', color: '#666', marginBottom: scale(20), fontStyle: 'italic', fontSize: scale(16) },
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -247,14 +231,14 @@ const styles = StyleSheet.create({
 
     // Card
     card: {
-        width: '48%', // 2 colunas
+        width: '48%', // Mantido % para garantir 2 colunas no grid, mas o interior escala
         backgroundColor: 'white',
-        borderRadius: 15,
-        marginBottom: 15,
+        borderRadius: scale(15),
+        marginBottom: scale(15),
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: scale(2) },
         shadowOpacity: 0.15,
-        shadowRadius: 4,
+        shadowRadius: scale(4),
         elevation: 4,
         overflow: 'hidden',
         position: 'relative',
@@ -262,23 +246,23 @@ const styles = StyleSheet.create({
         borderColor: 'transparent',
     },
     cardInativo: {
-        backgroundColor: '#e0e0e0', // Fundo cinza
+        backgroundColor: '#e0e0e0',
         borderColor: '#999',
         borderStyle: 'dashed',
     },
     cardImage: {
         width: '100%',
-        height: 130,
+        height: scale(130), // Altura da imagem escala
         resizeMode: 'cover',
     },
     cardContent: {
-        padding: 12,
+        padding: scale(12),
     },
     cardTitle: {
-        fontSize: 16,
+        fontSize: scale(16),
         fontWeight: 'bold',
         color: '#201000',
-        marginBottom: 6,
+        marginBottom: scale(6),
     },
     rowPriceStatus: {
         flexDirection: 'row',
@@ -286,25 +270,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cardPrice: {
-        fontSize: 15,
+        fontSize: scale(15),
         color: '#A11613',
         fontWeight: 'bold',
     },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        borderRadius: 8,
+        paddingVertical: scale(4),
+        paddingHorizontal: scale(8),
+        borderRadius: scale(8),
     },
     statusText: {
         color: 'white',
-        fontSize: 10,
+        fontSize: scale(10),
         fontWeight: 'bold',
     },
     inactiveOverlay: {
-        ...StyleSheet.absoluteFillObject, // Cobre o card todo
-        backgroundColor: 'rgba(0,0,0,0.05)', // Levemente escuro
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.05)',
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 2,
@@ -312,7 +296,8 @@ const styles = StyleSheet.create({
     inactiveText: {
         color: 'white',
         fontWeight: 'bold',
-        marginTop: 5,
+        fontSize: scale(14),
+        marginTop: scale(5),
         textShadowColor: 'rgba(0, 0, 0, 0.75)',
         textShadowOffset: {width: -1, height: 1},
         textShadowRadius: 5
