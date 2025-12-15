@@ -1,15 +1,20 @@
 // app/detalhesProduto.tsx
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ImageSourcePropType } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ImageSourcePropType, Dimensions } from 'react-native';
 import { useLocalSearchParams, useNavigation, Stack, router} from 'expo-router';
-import { useEffect, useState } from 'react'; // --- ALTERADO ---
+import { useEffect, useState } from 'react'; 
 import { Ionicons } from '@expo/vector-icons';
-// import EvilIcons from '@expo/vector-icons/EvilIcons'; // Não é mais usado
-import { RFPercentage } from 'react-native-responsive-fontsize';
-import { useCart } from '../../context/CartContext'; // --- NOVO ---
+import { useCart } from '../../context/CartContext'; 
 
-// --- NOVO ---
+// --- LÓGICA DE ESCALA MATEMÁTICA (VERTICAL) ---
+const { width, height } = Dimensions.get('window');
+// Garante que pegamos a menor dimensão (largura em modo retrato)
+const realWidth = width < height ? width : height; 
+// 768px é a largura base de um iPad/Tablet padrão em Retrato.
+const guidelineBaseWidth = 768; 
+const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
+// -------------------------------------
+
 // Copiamos a lógica de imagens e tipos do home.tsx
-// ---
 interface Produto {
   id: number;
   nome: string;
@@ -25,53 +30,42 @@ const bebidaImage = require('../../assets/images/bebida1.jpg');
 
 const getImageForItem = (categoriaId: number): ImageSourcePropType => {
   switch (categoriaId) {
-    case 1:
-      return lancheImage;
-    case 2:
-      return comboImage;
-    case 3:
-      return bebidaImage;
-    default:
-      return lancheImage;
+    case 1: return lancheImage;
+    case 2: return comboImage;
+    case 3: return bebidaImage;
+    default: return lancheImage;
   }
 };
 
 const formatPrice = (price: number): string => {
   return `R$ ${price.toFixed(2).replace('.', ',')}`;
 };
-// --- FIM DA SEÇÃO COPIADA ---
-
 
 export default function DetalhesProduto() {
-  // --- ALTERADO ---
-  // Recebe o 'item' como string JSON e o 'produto'
   const { item } = useLocalSearchParams();
   const produto = JSON.parse(item as string) as Produto;
 
   const navigation = useNavigation();
-  const { addToCart } = useCart(); // --- NOVO ---
-  const [quantity, setQuantity] = useState(1); // --- NOVO ---
+  const { addToCart } = useCart(); 
+  const [quantity, setQuantity] = useState(1); 
 
    // Atualiza o título da página para o nome do item
-    useEffect(() => {
-        navigation.setOptions({ title: produto.nome });
-    }, [produto.nome]);
+   useEffect(() => {
+       navigation.setOptions({ title: produto.nome });
+   }, [produto.nome]);
 
-  // --- NOVAS FUNÇÕES ---
   const handleIncrement = () => {
     setQuantity(q => q + 1);
   };
 
   const handleDecrement = () => {
-    setQuantity(q => (q > 1 ? q - 1 : 1)); // Não deixa ser menor que 1
+    setQuantity(q => (q > 1 ? q - 1 : 1)); 
   };
 
   const handleAddToCart = () => {
     addToCart(produto, quantity);
-    // Opcional: Navega para o carrinho ou mostra um "Toast" de sucesso
     router.push('/(protected)/(tabs)/carrinho');
   };
-  // --- FIM DAS NOVAS FUNÇÕES ---
 
   return (
     <>
@@ -79,17 +73,17 @@ export default function DetalhesProduto() {
         <View style={styles.containerFull}>
             <ScrollView>
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <Ionicons name="chevron-back-circle-outline" size={70} color="white" />
+                    <Ionicons name="chevron-back-circle-outline" size={scale(70)} color="white" />
                 </TouchableOpacity>
-                {/* --- ALTERADO --- Usa a imagem correta baseada na categoriaId */}
+                
                 <Image source={getImageForItem(produto.categoriaId)} style={styles.image} />
+                
                 <View style={styles.logoPosition}>
                     <Image source={require('../../assets/images/Logo.png')} style={styles.logo}  />
                 </View>
 
                 <View style={styles.containerInfos}>
                     <Text style={styles.name}>{produto.nome}</Text>
-                    {/* --- ALTERADO --- Formata o preço numérico */}
                     <Text style={styles.price}>{formatPrice(produto.preco)}</Text>
                     <Text style={styles.description}>{produto.descricao}</Text>
                 </View>
@@ -97,12 +91,10 @@ export default function DetalhesProduto() {
                 <View style={styles.footer}></View>
             </ScrollView>
             
-            {/* --- SEÇÃO DE BOTÕES ALTERADA --- */}
             <View style={styles.containerCartButtons}>
                 <View style={styles.quantityButton}>
                     <TouchableOpacity style={styles.addProduct1} onPress={handleDecrement}>
-                        {/* Mudei o ícone de "trash" para "remove" */}
-                        <Ionicons name="remove" size={50} color="black" />
+                        <Ionicons name="remove" size={scale(50)} color="black" />
                     </TouchableOpacity>
 
                     <Text style={styles.quantityText}>{quantity}</Text>
@@ -120,158 +112,143 @@ export default function DetalhesProduto() {
   );
 }
 
-// --- ESTILOS ---
-// (Seus estilos permanecem os mesmos)
+// --- ESTILOS COM SCALE ---
 const styles = StyleSheet.create({
     containerFull: { flex: 1, backgroundColor: 'white' },
-    image: { height: RFPercentage(50),  width: '100%'},
-    name: { fontSize: RFPercentage(4), fontWeight: 'bold', marginTop: -RFPercentage(2)},
-    price: { fontSize: RFPercentage(3), color: '#A11613', marginTop: RFPercentage(1.5), fontWeight: '500' },
-    logo: { height: RFPercentage(18), width: RFPercentage(16), justifyContent: 'center'},
+    
+    image: { 
+        height: scale(500),  // Altura proporcional
+        width: '100%'
+    },
+    
+    name: { 
+        fontSize: scale(32), 
+        fontWeight: 'bold', 
+        marginTop: scale(20)
+    },
+    
+    price: { 
+        fontSize: scale(24), 
+        color: '#A11613', 
+        marginTop: scale(10), 
+        fontWeight: 'bold' 
+    },
+    
+    logo: { 
+        height: scale(160), 
+        width: scale(150), 
+        resizeMode: 'contain'
+    },
+    
     backButton: {
         position: 'absolute',
-        left: 30,
-        top: '3%',
-        transform: [{ translateY: -20 }],
+        left: scale(30),
+        top: scale(40), // Ajustado para não colar no topo
         zIndex: 1,  
         backgroundColor: '#201000ff',
-        borderRadius: 80,
-        height: 70,
+        borderRadius: scale(80),
+        height: scale(70),
+        width: scale(70), // Adicionado width para ficar redondo
         alignItems: 'center',
-        flexDirection: 'row'
+        justifyContent: 'center', // Centraliza o ícone
     },
+    
     logoPosition: {
         width: '100%',
-        paddingHorizontal: 30,
+        paddingHorizontal: scale(30),
         flexDirection: 'row',
         justifyContent: 'flex-end', 
         alignItems: 'center', 
-        marginTop: -100,  
-        marginBottom: -80 
+        marginTop: -scale(80),  
+        marginBottom: -scale(60) 
     },
+    
     containerInfos:{
-        paddingHorizontal: 40 
+        paddingHorizontal: scale(40) 
     },
+    
     description:{
-        marginTop: RFPercentage(1.5),
-        fontSize: RFPercentage(2),
+        marginTop: scale(15),
+        fontSize: scale(18),
         textAlign: 'justify',
-        fontStyle: 'italic'
+        fontStyle: 'italic',
+        color: '#555'
     },
-    containerAdd:{
-        marginTop:30,
-        width: '100%',
-        paddingVertical: 20,
-        backgroundColor: '#201000ff',
-        justifyContent:'center',
-        paddingHorizontal: 40,
-        gap: 8
-    },
-    titleAdd:{
-        color: 'white',
-        fontSize: 32,
-        fontWeight: 'bold'
-    },
-    textAdd:{
-        color: 'white',
-        fontSize: 20,
-        fontWeight: '100',
-        fontStyle: 'italic'
-    },
+    
+    // --- BOTÕES INFERIORES ---
     containerCartButtons: {
         position: 'absolute',
-        bottom: 20, // distância da borda inferior
+        bottom: scale(20), 
         left: 0,
         right: 0,
         flexDirection: 'row',
-        justifyContent: 'space-around',
-        backgroundColor: 'transparent', // transparente
-        paddingHorizontal: 20,
+        justifyContent: 'space-between',
+        backgroundColor: 'transparent', 
+        paddingHorizontal: scale(50),
     },
+    
     quantityButton: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 30, 
+        paddingHorizontal: scale(20), 
         backgroundColor: "white",    
         borderColor: "#A11613",      
-        borderWidth: 3,              
-        borderStyle: "solid",        
-        width: 270,
-        height: 100,
-        borderRadius: 50,
+        borderWidth: scale(3),              
+        width: '30%', // Proporcional
+        height: scale(80),
+        borderRadius: scale(50),
         shadowColor: '#000', 
-        shadowOffset: { width: 5, height: 5 }, 
+        shadowOffset: { width: scale(5), height: scale(5) }, 
         shadowOpacity: 0.5,
-        shadowRadius: 8,       
+        shadowRadius: scale(8),       
     },
+    
     addProduct:{
         alignItems: 'center',
-        paddingHorizontal: 5,
-        borderRadius: 30
+        justifyContent: 'center',
+        paddingHorizontal: scale(5),
     },
+    
     addProduct1:{
         alignItems: 'center',
-        borderRadius: 30
+        justifyContent: 'center',
     },
+    
     addButtonText:{
-        marginTop:-20,
-        fontSize: 70,
-        color:"#A11613"
+        fontSize: scale(60),
+        color:"#A11613",
+        lineHeight: scale(70), // Ajuste fino para centralizar verticalmente o +
+        marginTop: -scale(5)
     },
+    
     addCartButton:{
         backgroundColor: "#A11613",
-        width: 390,
-        height: 100,
-        borderRadius: 50,
+        width: '55%', // Proporcional (40% + 55% + gap = 100% aprox)
+        height: scale(80),
+        borderRadius: scale(50),
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000', 
-        shadowOffset: { width: 5, height: 5 }, 
+        shadowOffset: { width: scale(5), height: scale(5) }, 
         shadowOpacity: 0.5,
-        shadowRadius: 8,
-        
+        shadowRadius: scale(8),
     },
+    
     addCartText:{
         color: 'white',
-        fontSize: 28,
-        fontWeight: 'bold'
+        fontSize: scale(20),
+        fontWeight: 'bold',
+        textAlign: 'center'
     },
+    
     quantityText:{
         color: 'black',
-        fontSize: 35,
+        fontSize: scale(30),
         fontWeight: 'bold'
     },
-    opcoesCard:{
-        height: 120,
-        borderBottomWidth: 2,
-        marginHorizontal: 40,
-        flexDirection: 'row',
-        alignItems:'center',
-        justifyContent: 'space-between',
-        padding: 20
-    },
-    cardRight:{
-        flexDirection: 'row',
-        alignItems:'center',
-        gap: 60
-    },
-    imgPqn:{
-        height: 100,
-        width: 100,
-        marginRight: 0,
-        borderRadius: 10
-    },
-    opName:{
-        fontSize: 30,
-        fontWeight: '500'
-    },
-    opAdd:{
-        fontSize: 60,
-        fontWeight: 'bold',
-        color: "#A11613"
-    },
+    
     footer:{
-        height: 200
+        height: scale(150) // Espaço para não cobrir conteúdo com os botões
     }
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'; // Adicionado useCallback
+import { useState, useEffect, useCallback } from 'react';
 import { 
   StyleSheet, 
   Image, 
@@ -9,13 +9,21 @@ import {
   View,
   ActivityIndicator,
   ImageSourcePropType,
-  RefreshControl // Adicionado RefreshControl
+  RefreshControl 
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
 import { useAuth } from '../../../context/AuthContext';
 import { api, ApiError } from '../../../lib/api'; 
 import { useCart } from '../../../context/CartContext';
+
+// --- LÓGICA DE ESCALA MATEMÁTICA (VERTICAL) ---
+const { width, height } = Dimensions.get('window');
+// Garante que pegamos a menor dimensão (largura em modo retrato)
+const realWidth = width < height ? width : height; 
+// 768px é a largura base de um iPad/Tablet padrão em Retrato.
+const guidelineBaseWidth = 768; 
+const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
+// -------------------------------------
 
 // Interface Produto
 interface Produto {
@@ -81,7 +89,7 @@ export default function TabOneScreen() {
   const [displayedItems, setDisplayedItems] = useState<Produto[]>([]); 
   
   const [loading, setLoading] = useState(true); 
-  const [refreshing, setRefreshing] = useState(false); // Estado para o pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
@@ -90,19 +98,16 @@ export default function TabOneScreen() {
 
   // --- BUSCA DE DADOS INTELIGENTE ---
   const fetchAllItems = useCallback(async (isBackground = false) => {
-    // Só mostra loading visual se NÃO for background e NÃO estiver puxando pra atualizar
     if (!isBackground && !refreshing) {
         setLoading(true);
     }
     
-    // Limpa erro apenas se for interação do usuário, para não piscar erro em background
     if (!isBackground) setError(null);
 
     try {
       const data: Produto[] = await api('/api/produtos', { auth: true });
       const produtosAtivos = data.filter(p => p.ativo);
       
-      // 1. Atualiza Produtos SOMENTE se mudou
       setAllProdutos(prev => {
           if (JSON.stringify(prev) !== JSON.stringify(produtosAtivos)) {
               return produtosAtivos;
@@ -110,7 +115,6 @@ export default function TabOneScreen() {
           return prev;
       });
 
-      // 2. Lógica das categorias
       const catIds = Array.from(new Set(produtosAtivos.map(p => p.categoriaId))).sort();
       const cats: Categoria[] = catIds.map(id => ({
           id: id,
@@ -118,7 +122,6 @@ export default function TabOneScreen() {
           imagem: getIconForCategory(id)
       }));
       
-      // 3. Atualiza Categorias SOMENTE se mudou
       setCategoriasDisponiveis(prev => {
           if (JSON.stringify(prev) !== JSON.stringify(cats)) {
               return cats;
@@ -128,7 +131,6 @@ export default function TabOneScreen() {
 
     } catch (e: any) {
       console.error(e);
-      // Evita mostrar erro na tela se for uma atualização em background que falhou
       if (!isBackground) {
           if (e instanceof ApiError) {
             setError(`Erro ${e.status}: ${e.message}`);
@@ -142,10 +144,9 @@ export default function TabOneScreen() {
     }
   }, [refreshing]);
 
-  // --- EFEITO DE POLLING (Atualiza a cada 5 segundos) ---
   useEffect(() => {
-    fetchAllItems(false); // Carga inicial
-    const interval = setInterval(() => fetchAllItems(true), 5000); // Background
+    fetchAllItems(false);
+    const interval = setInterval(() => fetchAllItems(true), 5000);
     return () => clearInterval(interval);
   }, [fetchAllItems]);
 
@@ -155,7 +156,6 @@ export default function TabOneScreen() {
     signOut();
   };
 
-  // Filtra produtos quando a categoria ou a lista muda
   useEffect(() => {
     if (allProdutos.length > 0) {
         const filtered = allProdutos.filter(
@@ -165,7 +165,6 @@ export default function TabOneScreen() {
     }
   }, [selectedCategoryId, allProdutos]); 
 
-  // Garante que uma categoria válida esteja selecionada
   useEffect(() => {
       if (categoriasDisponiveis.length > 0) {
           const existe = categoriasDisponiveis.find(c => c.id === selectedCategoryId);
@@ -177,7 +176,6 @@ export default function TabOneScreen() {
 
 
   const renderContent = () => {
-    // Se estiver carregando pela primeira vez (e não for refresh manual)
     if (loading && !refreshing && allProdutos.length === 0) {
       return <ActivityIndicator size="large" color="#A11613" style={styles.centered} />;
     }
@@ -238,7 +236,7 @@ export default function TabOneScreen() {
           onPress={handleSignOut} 
           style={styles.logoutButton}
         >
-          <Text style={{ color: 'white', fontWeight: 'bold' }}>SAIR</Text>
+          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: scale(14) }}>SAIR</Text>
         </TouchableOpacity>
       </View>
       
@@ -263,7 +261,6 @@ export default function TabOneScreen() {
 
       <ScrollView 
         contentContainerStyle={styles.menuContainer}
-        // Adicionado RefreshControl para puxar e atualizar
         refreshControl={
             <RefreshControl 
                 refreshing={refreshing} 
@@ -281,16 +278,14 @@ export default function TabOneScreen() {
   );
 }
 
-const { width } = Dimensions.get('window');
-const isMobile = width <= 768; 
-
+// --- ESTILOS ADAPTADOS PARA SCALE (Vertical) ---
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: "#201000ff",
-    height: "25%",
+    height: "25%", // Mantido % para preencher o topo proporcionalmente
   },
   logo: {
     height: "70%",
@@ -298,16 +293,16 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: '#A11613', 
-    padding: 15, 
-    paddingHorizontal: 20, 
+    paddingVertical: scale(10), 
+    paddingHorizontal: scale(15), 
     alignItems: 'center', 
     position: 'absolute', 
-    top: 20, 
-    right: 20,
-    borderRadius: 10,
+    top: scale(30), 
+    right: scale(20),
+    borderRadius: scale(10),
   },
   categoryText: {
-    fontSize: RFValue(16),
+    fontSize: scale(20),
     color: '#fff',
     fontWeight: '500',
     textShadowColor: '#000',
@@ -318,47 +313,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     backgroundColor: 'transparent',
+    alignItems: 'flex-start', // Garante alinhamento topo
   },
   categoryButton: {
     backgroundColor: '#A11613',
-    width: width * 0.27,
-    height: RFValue(45),
-    borderBottomLeftRadius: RFValue(20),
-    borderBottomRightRadius: RFValue(20),
+    width: '27%', // % garante que caibam 3 na largura
+    height: scale(50),
+    borderBottomLeftRadius: scale(20),
+    borderBottomRightRadius: scale(20),
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: RFValue(8),
+    paddingBottom: scale(8),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowRadius: scale(6),
     elevation: 3,
   },
   categoryButtonMiddle: {
     backgroundColor: '#A11613',
-    width: width * 0.40,
-    height: RFValue(55),
-    paddingHorizontal: RFValue(10),
-    borderBottomLeftRadius: RFValue(20),
-    borderBottomRightRadius: RFValue(20),
+    width: '40%', // Meio maior
+    height: scale(60),
+    paddingHorizontal: scale(5),
+    borderBottomLeftRadius: scale(20),
+    borderBottomRightRadius: scale(20),
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: RFValue(8),
-    gap: RFValue(5),
+    paddingBottom: scale(8),
+    gap: scale(5),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowRadius: scale(6),
     elevation: 3,
   },
   img: {
-    marginTop: -RFValue(45),
-    width: RFValue(36),
-    height: RFValue(32),
+    marginTop: -scale(45), // Puxa a imagem pra cima do botão
+    width: scale(36),
+    height: scale(40),
     resizeMode: 'contain',
   },
   menuContainer: { 
-    padding: RFValue(5),
+    padding: scale(10),
     flexGrow: 1, 
   },
   itemsContainer: {
@@ -367,35 +363,36 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   menuItem1: {
-    width: '32.5%',
-    marginBottom: RFValue(10),
+    width: '32.5%', // 3 colunas com espaçamento
+    marginBottom: scale(15),
   },
   menuItem: {
     backgroundColor: '#fff',
-    borderRadius: RFValue(20),
+    borderRadius: scale(20),
     overflow: 'hidden',
-    height: isMobile ? RFPercentage(20) : RFPercentage(25),
+    height: scale(220), // Altura fixa proporcional
     justifyContent: 'space-between',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: scale(3) },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: scale(4),
     elevation: 5,
   },
   menuItemImage: {
     width: '100%',
-    height: isMobile ? '65%' : '65%',
+    height: '70%', // Ocupa 60% do card
     resizeMode: 'cover',
   },
   cardTextContainer: {
     flexDirection: 'row',
     width: '100%',
-    height: isMobile ? '35%' : '35%',
+    height: '30%',
   },
   cardLeft: {
     width: '65%',
     justifyContent: 'space-between',
-    paddingHorizontal: RFValue(0), 
+    paddingHorizontal: scale(10), 
+    paddingVertical: scale(5), 
   },
   cardRight: {
     width: '35%',
@@ -403,21 +400,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuItemName: {
-    fontSize: isMobile ? RFValue(10) : RFValue(12),
-    fontWeight: '400',
-    marginVertical: RFValue(2),
-    marginLeft: isMobile ? RFValue(0) : RFValue(5),
-    marginRight: isMobile ? RFValue(0) : RFValue(3),
+    fontSize: scale(13),
+    fontWeight: 'bold', // Aumentei peso para legibilidade
+    color: '#333',
     flexShrink: 1, 
   },
   menuItemPrice: {
-    fontSize: isMobile ? RFValue(11) : RFValue(13),
+    fontSize: scale(14),
+    fontWeight: 'bold',
     color: '#aa6c00ff',
-    marginBottom: RFValue(3),
-    marginHorizontal: isMobile ? RFValue(0) : RFValue(5),
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
   },
   addProduct: {
     height: '100%',
@@ -426,7 +417,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 20,
+    borderBottomRightRadius: scale(20), // Match card radius
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -436,26 +427,26 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   addButtonText: {
-    fontSize: isMobile ? RFValue(10) : RFValue(12),
-    paddingVertical: RFValue(3),
+    fontSize: scale(14),
+    fontWeight: 'bold',
     color: "#FFFFFF",
     textAlign: 'center',
   },
   centered: {
-    marginTop: RFValue(50),
+    marginTop: scale(50),
   },
   errorText: {
     textAlign: 'center',
     color: '#A11613',
-    fontSize: RFValue(14),
-    marginTop: RFValue(50),
-    paddingHorizontal: RFValue(20),
+    fontSize: scale(14),
+    marginTop: scale(50),
+    paddingHorizontal: scale(20),
   },
   emptyText: {
     textAlign: 'center',
     color: '#555',
-    fontSize: RFValue(14),
-    marginTop: RFValue(50),
-    paddingHorizontal: RFValue(20),
+    fontSize: scale(14),
+    marginTop: scale(50),
+    paddingHorizontal: scale(20),
   },
 });
