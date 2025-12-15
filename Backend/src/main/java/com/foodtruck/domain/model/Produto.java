@@ -3,27 +3,37 @@ package com.foodtruck.domain.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "produto")
-@Getter @Setter
+@Getter
+@Setter
 public class Produto {
-  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
 
-  @Column(nullable = false)
-  private String nome;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  private String descricao;
+    @Column(nullable = false)
+    private String nome;
 
-  @Column(nullable = false)
-  private Integer preco; // centavos
+    private String descricao;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "categoria_id", nullable = false)
-  @com.fasterxml.jackson.annotation.JsonIgnore
-  private Categoria categoria;   // <-- nome de campo em minúsculas
+    @Column(nullable = false)
+    private Double preco; // centavos
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoria_id", nullable = false)
+    @JsonIgnore // evita serializar o objeto Categoria inteiro
+    private Categoria categoria;
 
-  private Boolean ativo = true;
+    private Boolean ativo = true;
+
+    // 👇 Getter adicional para expor apenas o ID da categoria no JSON
+    @JsonProperty("categoriaId")
+    public Long getCategoriaId() {
+        return categoria != null ? categoria.getId() : null;
+    }
 }

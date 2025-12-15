@@ -1,16 +1,22 @@
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useEffect } from 'react';
+// import { useCart } from '../../context/CartContext'; // <-- REMOVIDO
 
 export default function Agradecimento() {
 
+  // const { clearCart } = useCart(); // <-- REMOVIDO
+
   useEffect(() => {
+    // clearCart(); // <-- REMOVIDO (agora é feito no pagamento.tsx)
+
     const timer = setTimeout(() => {
-      router.replace('/home'); // redireciona para a Home
-    }, 3000); 
+      // Navega de volta para a tela inicial (aba 'home')
+      router.replace('/(protected)/(tabs)/home');
+    }, 3000);
 
     return () => clearTimeout(timer); // limpa o timer ao desmontar
-  }, []);
+  }, []); // <-- Array de dependências vazio
 
   return (
     <>
@@ -19,7 +25,7 @@ export default function Agradecimento() {
         <View style={styles.header}>
           {/* Logo */}
           <Image
-            source={require("../assets/images/Logo.png")}
+            source={require("../../assets/images/Logo.png")}
             style={styles.logo}
           />
         </View>
@@ -31,7 +37,7 @@ export default function Agradecimento() {
               <Text style={styles.message}>Tenha uma ótima refeição e volte sempre</Text>
             </View>
             <Image
-              source={require('../assets/images/check.png')}
+              source={require('../../assets/images/check.png')}
               style={styles.checkIcon}
             />
           </View>

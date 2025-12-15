@@ -7,21 +7,20 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+// (Não precisa mais de SimpleGrantedAuthority ou Collectors)
 
 import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class AuthTokenFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
-    private final UserDetailsServiceImpl userDetailsService;
+    private final UserDetailsServiceImpl userDetailsService; // Você já tem este
 
+    // O construtor está correto
     public AuthTokenFilter(JwtUtils jwtUtils, UserDetailsServiceImpl userDetailsService) {
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
@@ -36,30 +35,27 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
         try {
             String jwt = parseJwt(request);
+            
+            // 1. O token existe e é válido?
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
-                // PEGA O SUBJECT (email OU id, conforme você gerou o token)
-                String subject = jwtUtils.getSubjectFromJwtToken(jwt);
+                
+                // 2. Pegue o 'subject' (que é o email) do token
+                String email = jwtUtils.getSubjectFromJwtToken(jwt);
 
-                // Tenta usar as roles do token (se você as incluiu)
-                List<String> roles = jwtUtils.getRolesFromJwtToken(jwt);
-                UsernamePasswordAuthenticationToken authentication;
-
-                if (roles != null && !roles.isEmpty()) {
-                    var authorities = roles.stream()
-                            .map(SimpleGrantedAuthority::new)
-                            .collect(Collectors.toList());
-
-                    // subject será o email (recomendado). Se for ID, você pode trocar pelo load por ID.
-                    authentication = new UsernamePasswordAuthenticationToken(subject, null, authorities);
-                } else {
-                    // Sem roles no token? Carrega do banco.
-                    var userDetails = userDetailsService.loadUserByUsername(subject); // subject = email
-                    authentication = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities()
-                    );
-                }
+                // 3. SEMPRE carregue o usuário do banco.
+                // Isso garante que o 'principal' é um UserDetailsImpl
+                var userDetails = userDetailsService.loadUserByUsername(email); 
+                
+                // 4. Crie a autenticação
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        userDetails, // <-- O 'principal' agora é o objeto UserDetailsImpl
+                        null, 
+                        userDetails.getAuthorities() // As roles vêm direto do UserDetails
+                );
 
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                
+                // 5. Defina a autenticação no contexto do Spring
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {

@@ -25,14 +25,14 @@ public class UsuarioController {
 
   // DTO de criação
   public record UsuarioCreateDto(
-      @NotBlank String nome,
-      @NotBlank String tipo
+      @NotBlank String name,
+      @NotBlank String cargo
   ) {}
 
   // POST /api/usuarios
   @PostMapping
   public ResponseEntity<Usuario> criar(@RequestBody @Valid UsuarioCreateDto dto) {
-    Usuario u = service.criar(dto.nome(), dto.tipo());
+    Usuario u = service.criar(dto.name(), dto.cargo());
     return ResponseEntity.status(HttpStatus.CREATED).body(u);
   }
 

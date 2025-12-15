@@ -1,75 +1,116 @@
-CREATE TABLE `Usuario` (
-  `id` integer PRIMARY KEY,
-  `nome` varchar(255),
-  `tipo` varchar(255),
-  `data_criacao` timestamp
+-- =====================
+-- TABELAS BASE
+-- =====================
+
+CREATE TABLE users (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(255),
+  cargo VARCHAR(255),
+  data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE `Pedido` (
-  `id` integer PRIMARY KEY,
-  `usuario_id` integer NOT NULL,
-  `foodtruck_id` integer NOT NULL,
-  `status` varchar(255),
-  `total` integer,
-  `data_criacao` timestamp
+CREATE TABLE truck (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  nome VARCHAR(255),
+  localizacao VARCHAR(255)
 );
 
-CREATE TABLE `Produto` (
-  `id` integer PRIMARY KEY,
-  `nome` varchar(255),
-  `descricao` varchar(255),
-  `preco` integer,
-  `categoria_id` integer NOT NULL,
-  `ativo` bool
+CREATE TABLE categoria (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  nome VARCHAR(255),
+  descricao VARCHAR(255),
+  ativo BOOLEAN
 );
 
-CREATE TABLE `ItemPedido` (
-  `id` integer PRIMARY KEY,
-  `pedido_id` integer NOT NULL,
-  `produto_id` integer NOT NULL
+CREATE TABLE produto (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  nome VARCHAR(255),
+  descricao VARCHAR(255),
+  preco DECIMAL(10,2),
+  categoria_id INT NOT NULL,
+  ativo BOOLEAN
 );
 
-CREATE TABLE `Estoque` (
-  `id` integer PRIMARY KEY,
-  `produto_id` integer NOT NULL,
-  `quantidade` integer,
-  `unidade` varchar(255)
+CREATE TABLE pedido (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  users_id INT NOT NULL,
+  foodtruck_id INT NOT NULL,
+  status VARCHAR(255),
+  total DECIMAL(10,2),
+  data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE `Pagamento` (
-  `id` integer PRIMARY KEY,
-  `pedido_id` integer NOT NULL,
-  `metodo` varchar(255),
-  `status` varchar(255),
-  `valor` integer,
-  `criado_em` datetime
+CREATE TABLE itempedido (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  pedido_id INT NOT NULL,
+  produto_id INT NOT NULL,
+  quantidade INT DEFAULT 1
 );
 
-CREATE TABLE `MovimentacaoEstoque` (
-  `id` integer PRIMARY KEY,
-  `produto_id` integer NOT NULL,
-  `tipo_movimento` varchar(255),
-  `quantidade` integer,
-  `data` datetime
+CREATE TABLE estoque (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  produto_id INT NOT NULL,
+  quantidade INT,
+  unidade VARCHAR(255)
 );
 
-CREATE TABLE `Categoria` (
-  `id` integer PRIMARY KEY,
-  `nome` varchar(255),
-  `descricao` varchar(255),
-  `ativo` boolean
+CREATE TABLE pagamento (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  pedido_id INT NOT NULL,
+  metodo VARCHAR(255),
+  status VARCHAR(255),
+  valor DECIMAL(10,2),
+  criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE `Pedido` ADD CONSTRAINT `usuario_pedido` FOREIGN KEY (`usuario_id`) REFERENCES `Usuario` (`id`);
+CREATE TABLE movimentacaoestoque (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  produto_id INT NOT NULL,
+  tipo_movimento VARCHAR(255),
+  quantidade INT,
+  data DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-ALTER TABLE `ItemPedido` ADD CONSTRAINT `produto_ItemPedido` FOREIGN KEY (`produto_id`) REFERENCES `Produto` (`id`);
+-- =====================
+-- FOREIGN KEYS
+-- =====================
 
-ALTER TABLE `ItemPedido` ADD CONSTRAINT `pedido_ItemPedido` FOREIGN KEY (`pedido_id`) REFERENCES `Pedido` (`id`);
+ALTER TABLE pedido 
+  ADD CONSTRAINT fk_pedido_users 
+  FOREIGN KEY (users_id) REFERENCES users(id)
+  ON DELETE RESTRICT ON UPDATE CASCADE;
 
-ALTER TABLE `Estoque` ADD CONSTRAINT `Estoque_Produto` FOREIGN KEY (`produto_id`) REFERENCES `Produto` (`id`);
+ALTER TABLE pedido 
+  ADD CONSTRAINT fk_pedido_truck 
+  FOREIGN KEY (foodtruck_id) REFERENCES truck(id)
+  ON DELETE RESTRICT ON UPDATE CASCADE;
 
-ALTER TABLE `Pedido` ADD CONSTRAINT `Pagamento_Pedio` FOREIGN KEY (`id`) REFERENCES `Pagamento` (`pedido_id`);
+ALTER TABLE itempedido 
+  ADD CONSTRAINT fk_itempedido_pedido 
+  FOREIGN KEY (pedido_id) REFERENCES pedido(id)
+  ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `MovimentacaoEstoque` ADD CONSTRAINT `MovimentacaoEstoque_Produto` FOREIGN KEY (`produto_id`) REFERENCES `Produto` (`id`);
+ALTER TABLE itempedido 
+  ADD CONSTRAINT fk_itempedido_produto 
+  FOREIGN KEY (produto_id) REFERENCES produto(id)
+  ON DELETE RESTRICT ON UPDATE CASCADE;
 
-ALTER TABLE `Produto` ADD CONSTRAINT `Produto_Categoria` FOREIGN KEY (`categoria_id`) REFERENCES `Categoria` (`id`);
+ALTER TABLE estoque 
+  ADD CONSTRAINT fk_estoque_produto 
+  FOREIGN KEY (produto_id) REFERENCES produto(id)
+  ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE pagamento 
+  ADD CONSTRAINT fk_pagamento_pedido 
+  FOREIGN KEY (pedido_id) REFERENCES pedido(id)
+  ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE movimentacaoestoque 
+  ADD CONSTRAINT fk_movimentacao_produto 
+  FOREIGN KEY (produto_id) REFERENCES produto(id)
+  ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE produto 
+  ADD CONSTRAINT fk_produto_categoria 
+  FOREIGN KEY (categoria_id) REFERENCES categoria(id)
+  ON DELETE SET NULL ON UPDATE CASCADE;
