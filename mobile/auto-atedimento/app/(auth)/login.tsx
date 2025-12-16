@@ -7,6 +7,9 @@ import {
     TextInput,
     ActivityIndicator,
     Dimensions,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
@@ -14,14 +17,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 
-// --- LÓGICA DE ESCALA MATEMÁTICA (VERTICAL) ---
+
 const { width, height } = Dimensions.get('window');
-// Garante que pegamos a menor dimensão (largura em modo retrato)
 const realWidth = width < height ? width : height; 
-// 768px é a largura base de um iPad/Tablet padrão em Retrato.
 const guidelineBaseWidth = 768; 
 const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
-// -------------------------------------
+
 
 const isEmailValid = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -40,6 +41,7 @@ export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    
     const [submitting, setSubmitting] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [registrationErrors, setRegistrationErrors] = useState<RegistrationErrors>({});
@@ -47,7 +49,7 @@ export default function Login() {
 
     const { signIn, signUp, user, loading, signInWithGoogle } = useAuth();
 
-    // Redirecionamento
+    
     useEffect(() => {
         if (!loading && user) {
             if (user.cargo === 'CHAPEIRO') {
@@ -58,7 +60,7 @@ export default function Login() {
         }
     }, [user, loading]);
 
-    // Validação
+    
     useEffect(() => {
         if (activeTab === 'cadastro') {
             const newErrors: RegistrationErrors = {};
@@ -82,55 +84,88 @@ export default function Login() {
 
     const handleEmailChange = (text: string) => { setEmail(text); if (errorMessage) setErrorMessage(null); };
     const handlePasswordChange = (text: string) => { setPassword(text); if (errorMessage) setErrorMessage(null); };
-    const handleNomeChange = (text: string) => setNome(text);
+    const handleNomeChange = (text: string) => { setNome(text); if (errorMessage) setErrorMessage(null); };
 
-    // Login
+    
+    const parseError = (error: any, context: 'login' | 'cadastro') => {
+        const status = error?.status || error?.response?.status;
+        const msg = error?.message?.toLowerCase() || '';
+
+        if (context === 'login') {
+            if (status === 401 || status === 403 || msg.includes('invalid') || msg.includes('credential')) {
+                return 'E-mail ou senha incorretos.';
+            }
+            if (status === 404 || msg.includes('not found')) {
+                return 'Usuário não encontrado.';
+            }
+        }
+
+        if (context === 'cadastro') {
+            if (status === 409 || msg.includes('exists') || msg.includes('already')) {
+                return 'Este e-mail já está cadastrado.';
+            }
+            if (status === 400) {
+                return 'Dados inválidos ou e-mail já em uso.';
+            }
+        }
+
+        if (msg.includes('network') || msg.includes('conexão')) {
+            return 'Sem conexão com a internet.';
+        }
+
+        return 'Ocorreu um erro inesperado. Tente novamente.';
+    };
+
     const handleLogin = async () => {
         const trimmedEmail = email.trim();
         const trimmedPassword = password.trim();
 
-        if (!trimmedEmail || !trimmedPassword || !isEmailValid(trimmedEmail) || trimmedPassword.length < 3) {
-            setErrorMessage('Verifique seus dados.');
+        if (!trimmedEmail || !trimmedPassword || !isEmailValid(trimmedEmail)) {
+            setErrorMessage('Verifique seu e-mail e senha.');
             return;
         }
 
         setSubmitting(true);
+        setErrorMessage(null);
+
         try {
             await signIn(trimmedEmail.toLowerCase(), trimmedPassword);
         } catch (e: any) {
-            if (e?.status === 403) setErrorMessage('E-mail ou senha inválidos.');
-            else setErrorMessage(e?.message ?? 'Falha no login.');
+            setErrorMessage(parseError(e, 'login'));
         } finally {
             setSubmitting(false);
         }
     };
 
-    // Cadastro
     const handleRegister = async () => {
         if (!isRegisterFormValid) return;
+        
         setSubmitting(true);
+        setErrorMessage(null);
+
         try {
             const defaultRole = "USUARIO"; 
             await signUp(nome.trim(), email.trim().toLowerCase(), password, defaultRole);
         } catch (e: any) {
-            if (e?.status === 409) setErrorMessage('Este e-mail já está cadastrado.');
-            else setErrorMessage(e?.message ?? 'Falha no cadastro.');
+            setErrorMessage(parseError(e, 'cadastro'));
         } finally {
             setSubmitting(false);
         }
     };
 
-    // Google
     const handleGoogleLogin = async () => {
         if (submitting) return; 
+        
         setSubmitting(true);
         setErrorMessage(null);
+        
         try {
             await signInWithGoogle();
         } catch (e: any) {
-            setErrorMessage(e?.message ?? 'Login Google falhou.');
-            setSubmitting(false); 
-        } 
+            setErrorMessage('Falha ao conectar com Google.');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     if (loading) {
@@ -148,107 +183,185 @@ export default function Login() {
             <Stack.Screen options={{ headerShown: false }} />
             <LinearGradient colors={['#7E0000', '#520000']} style={styles.containerFull}>
                 
-                {/* Parte Superior (Logo e Texto) */}
-                <View style={styles.higher}>
-                    <View style={styles.headerTexts}>
-                        <Text style={styles.headerText}>Seja Bem Vindo!</Text>
-                        <Text style={styles.headerText}>{activeTab === 'login' ? 'Faça o Login' : 'Cadastre-se'}</Text>
-                    </View>
-                    <Image source={require('../../assets/images/Logo.png')} style={styles.logo} resizeMode="contain" />
-                </View>
-
-                {/* Card Branco Inferior */}
-                <View style={styles.lower}>
-                    <View style={styles.LoginRegister}>
-                        <TouchableOpacity style={[styles.tabButton, activeTab === 'login' ? styles.tabActive : styles.tabInactiveLeft]} onPress={() => { setActiveTab('login'); setErrorMessage(null); }}>
-                            <Text style={[styles.tabText, activeTab === 'login' && styles.tabTextActive]}>Entrar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.tabButton, activeTab === 'cadastro' ? styles.tabActive : styles.tabInactiveRight]} onPress={() => { setActiveTab('cadastro'); setErrorMessage(null); }}>
-                            <Text style={[styles.tabText, activeTab === 'cadastro' && styles.tabTextActive]}>Cadastrar</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* LOGIN FORM */}
-                    {activeTab === 'login' && (
-                        <View style={styles.formContainer}>
-                            <View style={styles.inputs}>
-                                <View style={styles.inputContainer}>
-                                    <TextInput style={styles.input} placeholder="Digite seu e-mail" placeholderTextColor="#999" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={handleEmailChange} />
-                                    <Ionicons name="mail-outline" size={scale(28)} color="#555" style={styles.icon} />
-                                </View>
-                                <View style={styles.inputContainer}>
-                                    <TextInput style={styles.input} placeholder="Digite sua senha" placeholderTextColor="#999" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
-                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={scale(28)} color="#A11613" style={styles.icon} />
-                                    </TouchableOpacity>
-                                </View>
+                {/* KeyboardAvoidingView empurra o conteúdo quando o teclado abre.
+                    ScrollView permite arrastar se o conteúdo ficar maior que a tela.
+                */}
+                <KeyboardAvoidingView 
+                    style={{ flex: 1 }} 
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                >
+                    <ScrollView 
+                        contentContainerStyle={styles.scrollContent} 
+                        scrollEnabled={true} 
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
+                        
+                        {/* Parte Superior */}
+                        <View style={styles.higher}>
+                            <View style={styles.headerTexts}>
+                                <Text style={styles.headerText}>Seja Bem Vindo!</Text>
+                                <Text style={styles.headerText}>{activeTab === 'login' ? 'Faça o Login' : 'Cadastre-se'}</Text>
                             </View>
-                            <View style={styles.errorContainer}>
-                                {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-                            </View>
-                            <View style={styles.buttonsContainer}>
-                                <TouchableOpacity style={[styles.submitButton, { opacity: submitting ? 0.7 : 1 }]} onPress={handleLogin} disabled={submitting}>
-                                    <Text style={styles.submitText}>{submitting ? 'Entrando...' : 'Entrar'}</Text>
+                            <Image source={require('../../assets/images/Logo.png')} style={styles.logo} resizeMode="contain" />
+                        </View>
+
+                        {/* Card Branco */}
+                        <View style={styles.lower}>
+                            
+                            {/* Tabs */}
+                            <View style={styles.LoginRegister}>
+                                <TouchableOpacity 
+                                    style={[styles.tabButton, activeTab === 'login' ? styles.tabActive : styles.tabInactiveLeft]} 
+                                    onPress={() => { setActiveTab('login'); setErrorMessage(null); }}
+                                >
+                                    <Text style={[styles.tabText, activeTab === 'login' && styles.tabTextActive]}>Entrar</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={[{ opacity: submitting ? 0.7 : 1 }]} onPress={handleGoogleLogin} disabled={submitting}>
-                                    <Image source={require('../../assets/images/logoGoogle.png')} style={styles.logoGoogle} resizeMode="contain" />
+                                <TouchableOpacity 
+                                    style={[styles.tabButton, activeTab === 'cadastro' ? styles.tabActive : styles.tabInactiveRight]} 
+                                    onPress={() => { setActiveTab('cadastro'); setErrorMessage(null); }}
+                                >
+                                    <Text style={[styles.tabText, activeTab === 'cadastro' && styles.tabTextActive]}>Cadastrar</Text>
                                 </TouchableOpacity>
                             </View>
-                        </View>
-                    )}
 
-                    {/* CADASTRO FORM */}
-                    {activeTab === 'cadastro' && (
-                        <View style={styles.formContainer}>
-                            <View style={styles.fieldContainer}>
-                                <View style={styles.inputContainer}>
-                                    <TextInput style={styles.input} placeholder="Nome" placeholderTextColor="#999" value={nome} onChangeText={handleNomeChange} />
-                                    <Ionicons name="person-outline" size={scale(28)} color="#555" style={styles.icon} />
-                                </View>
-                                <View style={styles.realTimeErrorContainer}>
-                                    {registrationErrors.nome && <Text style={styles.realTimeErrorText}>{registrationErrors.nome}</Text>}
-                                </View>
-                            </View>
+                            {/* --- LOGIN --- */}
+                            {activeTab === 'login' && (
+                                <View style={styles.formContainer}>
+                                    <View style={styles.inputs}>
+                                        <View style={styles.inputContainer}>
+                                            <TextInput 
+                                                style={styles.input} 
+                                                placeholder="Digite seu e-mail" 
+                                                placeholderTextColor="#999" 
+                                                keyboardType="email-address" 
+                                                autoCapitalize="none" 
+                                                value={email} 
+                                                onChangeText={handleEmailChange}
+                                                editable={!submitting} 
+                                            />
+                                            <Ionicons name="mail-outline" size={scale(28)} color="#555" style={styles.icon} />
+                                        </View>
+                                        <View style={styles.inputContainer}>
+                                            <TextInput 
+                                                style={styles.input} 
+                                                placeholder="Digite sua senha" 
+                                                placeholderTextColor="#999" 
+                                                secureTextEntry={!showPassword} 
+                                                value={password} 
+                                                onChangeText={handlePasswordChange}
+                                                editable={!submitting} 
+                                            />
+                                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={scale(28)} color="#A11613" style={styles.icon} />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                    
+                                    <View style={styles.errorContainer}>
+                                        {errorMessage && (
+                                            <View style={styles.errorBox}>
+                                                <Ionicons name="alert-circle" size={scale(20)} color="#D32F2F" />
+                                                <Text style={styles.errorText}>{errorMessage}</Text>
+                                            </View>
+                                        )}
+                                    </View>
 
-                            <View style={styles.fieldContainer}>
-                                <View style={styles.inputContainer}>
-                                    <TextInput style={styles.input} placeholder="Digite seu e-mail" placeholderTextColor="#999" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={handleEmailChange} />
-                                    <Ionicons name="mail-outline" size={scale(28)} color="#555" style={styles.icon} />
+                                    <View style={styles.buttonsContainer}>
+                                        <TouchableOpacity 
+                                            style={[styles.submitButton, { opacity: submitting ? 0.7 : 1 }]} 
+                                            onPress={handleLogin} 
+                                            disabled={submitting}
+                                        >
+                                            {submitting ? (
+                                                <ActivityIndicator size="small" color="#FFF" />
+                                            ) : (
+                                                <Text style={styles.submitText}>Entrar</Text>
+                                            )}
+                                        </TouchableOpacity>
+                                        
+                                        <TouchableOpacity 
+                                            style={[{ opacity: submitting ? 0.5 : 1 }]} 
+                                            onPress={handleGoogleLogin} 
+                                            disabled={submitting}
+                                        >
+                                            <Image source={require('../../assets/images/logoGoogle.png')} style={styles.logoGoogle} resizeMode="contain" />
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
-                                <View style={styles.realTimeErrorContainer}>
-                                    {registrationErrors.email && <Text style={styles.realTimeErrorText}>{registrationErrors.email}</Text>}
-                                </View>
-                            </View>
+                            )}
 
-                            <View style={styles.fieldContainer}>
-                                <View style={styles.inputContainer}>
-                                    <TextInput style={styles.input} placeholder="Digite sua senha" placeholderTextColor="#999" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
-                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={scale(28)} color="#A11613" style={styles.icon} />
+                            {/* --- CADASTRO --- */}
+                            {activeTab === 'cadastro' && (
+                                <View style={styles.formContainer}>
+                                    <View style={styles.fieldContainer}>
+                                        <View style={styles.inputContainer}>
+                                            <TextInput style={styles.input} placeholder="Nome" placeholderTextColor="#999" value={nome} onChangeText={handleNomeChange} editable={!submitting} />
+                                            <Ionicons name="person-outline" size={scale(28)} color="#555" style={styles.icon} />
+                                        </View>
+                                        <View style={styles.realTimeErrorContainer}>
+                                            {registrationErrors.nome && <Text style={styles.realTimeErrorText}>{registrationErrors.nome}</Text>}
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.fieldContainer}>
+                                        <View style={styles.inputContainer}>
+                                            <TextInput style={styles.input} placeholder="Digite seu e-mail" placeholderTextColor="#999" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={handleEmailChange} editable={!submitting} />
+                                            <Ionicons name="mail-outline" size={scale(28)} color="#555" style={styles.icon} />
+                                        </View>
+                                        <View style={styles.realTimeErrorContainer}>
+                                            {registrationErrors.email && <Text style={styles.realTimeErrorText}>{registrationErrors.email}</Text>}
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.fieldContainer}>
+                                        <View style={styles.inputContainer}>
+                                            <TextInput style={styles.input} placeholder="Digite sua senha" placeholderTextColor="#999" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} editable={!submitting} />
+                                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={scale(28)} color="#A11613" style={styles.icon} />
+                                            </TouchableOpacity>
+                                        </View>
+                                        <View style={styles.realTimeErrorContainer}>
+                                            {registrationErrors.password && <Text style={styles.realTimeErrorText}>{registrationErrors.password}</Text>}
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.fieldContainer}>
+                                        <View style={[styles.inputContainer, { backgroundColor: '#f0f0f0', borderBottomColor: '#aaa' }]}>
+                                            <TextInput 
+                                                style={[styles.input, { color: '#666' }]} 
+                                                value="Cargo: USUÁRIO" 
+                                                editable={false} 
+                                            />
+                                            <Ionicons name="briefcase-outline" size={scale(28)} color="#999" style={styles.icon} />
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.errorContainer}>
+                                        {errorMessage && (
+                                            <View style={styles.errorBox}>
+                                                <Ionicons name="alert-circle" size={scale(20)} color="#D32F2F" />
+                                                <Text style={styles.errorText}>{errorMessage}</Text>
+                                            </View>
+                                        )}
+                                    </View>
+
+                                    <TouchableOpacity 
+                                        style={[styles.submitButton, { opacity: !isRegisterFormValid || submitting ? 0.6 : 1 }]} 
+                                        onPress={handleRegister} 
+                                        disabled={!isRegisterFormValid || submitting}
+                                    >
+                                        {submitting ? (
+                                            <ActivityIndicator size="small" color="#FFF" />
+                                        ) : (
+                                            <Text style={styles.submitText}>Cadastrar</Text>
+                                        )}
                                     </TouchableOpacity>
                                 </View>
-                                <View style={styles.realTimeErrorContainer}>
-                                    {registrationErrors.password && <Text style={styles.realTimeErrorText}>{registrationErrors.password}</Text>}
-                                </View>
-                            </View>
-
-                            <View style={styles.fieldContainer}>
-                                <View style={[styles.inputContainer, { backgroundColor: '#f0f0f0', borderBottomColor: '#aaa' }]}>
-                                    <TextInput 
-                                        style={[styles.input, { color: '#666' }]} 
-                                        value="Cargo: USUÁRIO" 
-                                        editable={false} 
-                                    />
-                                    <Ionicons name="briefcase-outline" size={scale(28)} color="#999" style={styles.icon} />
-                                </View>
-                            </View>
-
-                            <TouchableOpacity style={[styles.submitButton, { opacity: !isRegisterFormValid || submitting ? 0.6 : 1 }]} onPress={handleRegister} disabled={!isRegisterFormValid || submitting}>
-                                <Text style={styles.submitText}>{submitting ? 'Cadastrando...' : 'Cadastrar'}</Text>
-                            </TouchableOpacity>
+                            )}
                         </View>
-                    )}
-                </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </LinearGradient>
         </>
     );
@@ -256,14 +369,19 @@ export default function Login() {
 
 const styles = StyleSheet.create({
     containerFull: { flex: 1, backgroundColor: '#EFEAEA' },
-    
-    // HEADER
+    scrollContent: {
+        flexGrow: 1,
+        justifyContent: 'center', 
+        paddingBottom: scale(20), 
+    },
+
     higher: {
         width: '100%',
         flexDirection: 'row',
         justifyContent: 'space-around',
         alignItems: 'center',
-        height: '30%', // Mantém a proporção da tela original
+        marginBottom: scale(150), 
+        marginTop: scale(50), 
     },
     headerTexts: { gap: scale(10) },
     headerText: {
@@ -278,20 +396,15 @@ const styles = StyleSheet.create({
         height: scale(180), 
         width: scale(180) 
     },
-
-    // CONTAINER BRANCO (CARD)
     lower: {
         backgroundColor: '#fffbfb',
-        width: '70%', // Mantém a largura de 70% da tela, como no seu design
+        width: '70%', 
         paddingVertical: scale(50),
         alignSelf: 'center',
         borderRadius: scale(40),
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: scale(50)
     },
-
-    // ABAS (Login/Cadastro)
     LoginRegister: {
         flexDirection: 'row',
         backgroundColor: '#ddd',
@@ -308,7 +421,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: scale(30),
         alignItems: 'center',
         backgroundColor: '#ddd',
-        borderRadius: scale(50), // Garante o formato de pílula
+        borderRadius: scale(50), 
     },
     tabActive: {
         backgroundColor: '#7E0000',
@@ -329,17 +442,13 @@ const styles = StyleSheet.create({
     },
     tabText: { fontSize: scale(25), fontWeight: '500', color: '#333' },
     tabTextActive: { color: '#fff' },
-
-    // FORMULÁRIOS
     formContainer: { width: '80%', alignItems: 'center'},
     inputs: { gap: scale(20), width: '100%', alignItems: 'center', marginTop: scale(20) },
-    
     fieldContainer: { width: '100%', gap: scale(8), marginBottom: scale(10) },
-    
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderBottomWidth: scale(3), // Borda proporcional
+        borderBottomWidth: scale(3),
         borderBottomColor: '#7E0000',
         width: '100%',
     },
@@ -352,7 +461,6 @@ const styles = StyleSheet.create({
     },
     icon: { marginHorizontal: scale(10) },
 
-    // BOTÕES
     buttonsContainer:{ 
         width: '100%',
         flexDirection: 'row', 
@@ -367,13 +475,13 @@ const styles = StyleSheet.create({
         paddingVertical: scale(20),
         borderRadius: scale(50),
         alignItems: 'center',
+        justifyContent: 'center', 
         shadowColor: '#000',
         shadowOffset: { width: 5, height: 5 },
         shadowOpacity: 0.4,
         shadowRadius: 6,
     },
-    submitText: { color: '#fff', fontSize: scale(25), fontWeight: 'bold' },
-    
+    submitText: { color: '#fff', fontSize: scale(25), fontWeight: 'bold' }, 
     logoGoogle: { 
         height: scale(70), 
         width: scale(70), 
@@ -383,19 +491,29 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.4,
         shadowRadius: 3
     },
-
-    // ERROS
     errorContainer: {
-        marginTop: scale(10),
+        marginTop: scale(15),
         width: '100%',
         justifyContent: 'center',
         alignItems: 'center',
+        minHeight: scale(30), 
+    },
+    errorBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: scale(10),
+        backgroundColor: '#FFEBEE', 
+        paddingVertical: scale(8),
+        paddingHorizontal: scale(15),
+        borderRadius: scale(10),
+        borderWidth: 1,
+        borderColor: '#FFCDD2',
     },
     errorText: {
         color: '#D32F2F',
-        fontSize: scale(14),
+        fontSize: scale(16),
         textAlign: 'center',
-        fontWeight: '500',
+        fontWeight: '600',
     },
     realTimeErrorContainer: {
         justifyContent: 'center',
