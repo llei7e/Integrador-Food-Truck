@@ -1,19 +1,13 @@
-// app/(protected)/(tabs)/carrinho.tsx
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ImageSourcePropType, Dimensions } from 'react-native';
 import { router } from 'expo-router';
 import { useCart } from '../../../context/CartContext'; 
 import { Ionicons } from '@expo/vector-icons'; 
 
-// --- LÓGICA DE ESCALA MATEMÁTICA (VERTICAL) ---
 const { width, height } = Dimensions.get('window');
-// Garante que pegamos a menor dimensão (largura em modo retrato)
 const realWidth = width < height ? width : height; 
-// 768px é a largura base de um iPad/Tablet padrão em Retrato.
 const guidelineBaseWidth = 768; 
 const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
-// -------------------------------------
 
-// Copiando helpers de imagem e preço
 const lancheImage = require('../../../assets/images/lanche1.jpg');
 const comboImage = require('../../../assets/images/fritas.jpg');
 const bebidaImage = require('../../../assets/images/bebida1.jpg');
@@ -34,7 +28,6 @@ const formatPrice = (price: number): string => {
 export default function Carrinho() {
   const { cartItems, total, updateQuantity } = useCart();
 
-  // O que mostrar se o carrinho estiver vazio
   if (cartItems.length === 0) {
     return (
       <View style={styles.container}>
@@ -110,7 +103,6 @@ export default function Carrinho() {
   );
 }
 
-// --- ESTILOS COM SCALE ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'white' },
   
@@ -118,11 +110,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#201000ff',
     flexDirection: 'row',
     alignItems: 'center',
-    height: "20%", // Mantido % para preencher o topo
+    height: "20%", 
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: scale(48), // Ajustado proporcionalmente
+    fontSize: scale(48), 
     fontWeight: 'bold',
     color: 'white',
   },
@@ -131,15 +123,13 @@ const styles = StyleSheet.create({
     marginTop: -scale(2),
     marginBottom: scale(30),
     backgroundColor: 'white',
-    paddingHorizontal: scale(25),
-    // gap foi removido daqui pois não funciona bem em views antigas do RN sem flex, 
-    // o espaçamento interno é controlado pelos elementos
+    paddingHorizontal: scale(25),   
   },
   line:{
     width:"100%",
     borderTopWidth: scale(2),
     borderColor: "black",
-    marginBottom: scale(30), // Substitui o gap
+    marginBottom: scale(30), 
   },
   inside:{
     flexDirection: 'row',
@@ -176,8 +166,6 @@ const styles = StyleSheet.create({
     color: '#A11613', 
     marginTop: scale(5) 
   },
-  
-  // --- QUANTIDADE ---
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -189,8 +177,6 @@ const styles = StyleSheet.create({
     minWidth: scale(30),
     textAlign: 'center'
   },
-
-  // --- EMPTY STATE ---
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -215,8 +201,6 @@ const styles = StyleSheet.create({
     fontSize: scale(18),
     fontWeight: 'bold',
   },
-
-  // --- FOOTER ---
   footer: {
     position: 'absolute',
     bottom: scale(20),

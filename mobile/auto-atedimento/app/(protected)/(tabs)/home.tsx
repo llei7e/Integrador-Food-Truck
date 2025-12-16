@@ -16,16 +16,14 @@ import { useAuth } from '../../../context/AuthContext';
 import { api, ApiError } from '../../../lib/api'; 
 import { useCart } from '../../../context/CartContext';
 
-// --- LÓGICA DE ESCALA MATEMÁTICA (VERTICAL) ---
+
 const { width, height } = Dimensions.get('window');
-// Garante que pegamos a menor dimensão (largura em modo retrato)
 const realWidth = width < height ? width : height; 
-// 768px é a largura base de um iPad/Tablet padrão em Retrato.
 const guidelineBaseWidth = 768; 
 const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
-// -------------------------------------
 
-// Interface Produto
+
+
 interface Produto {
   id: number;
   nome: string;
@@ -35,14 +33,14 @@ interface Produto {
   categoriaId: number; 
 }
 
-// Interface Categoria
+
 interface Categoria {
     id: number;
     nome: string;
     imagem: ImageSourcePropType;
 }
 
-// Helpers de Imagem
+
 const lancheImage = require('../../../assets/images/lanche1.jpg');
 const comboImage = require('../../../assets/images/fritas.jpg');
 const bebidaImage = require('../../../assets/images/bebida1.jpg');
@@ -96,7 +94,7 @@ export default function TabOneScreen() {
   const { signOut } = useAuth();
   const { addToCart, clearCart } = useCart();
 
-  // --- BUSCA DE DADOS INTELIGENTE ---
+  
   const fetchAllItems = useCallback(async (isBackground = false) => {
     if (!isBackground && !refreshing) {
         setLoading(true);
@@ -278,14 +276,14 @@ export default function TabOneScreen() {
   );
 }
 
-// --- ESTILOS ADAPTADOS PARA SCALE (Vertical) ---
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: "#201000ff",
-    height: "25%", // Mantido % para preencher o topo proporcionalmente
+    height: "25%", 
   },
   logo: {
     height: "70%",
@@ -302,7 +300,7 @@ const styles = StyleSheet.create({
     borderRadius: scale(10),
   },
   categoryText: {
-    fontSize: scale(20),
+    fontSize: scale(24),
     color: '#fff',
     fontWeight: '500',
     textShadowColor: '#000',
@@ -313,11 +311,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     backgroundColor: 'transparent',
-    alignItems: 'flex-start', // Garante alinhamento topo
+    alignItems: 'flex-start', 
   },
   categoryButton: {
     backgroundColor: '#A11613',
-    width: '27%', // % garante que caibam 3 na largura
+    width: '27%', 
     height: scale(50),
     borderBottomLeftRadius: scale(20),
     borderBottomRightRadius: scale(20),
@@ -332,7 +330,7 @@ const styles = StyleSheet.create({
   },
   categoryButtonMiddle: {
     backgroundColor: '#A11613',
-    width: '40%', // Meio maior
+    width: '40%', 
     height: scale(60),
     paddingHorizontal: scale(5),
     borderBottomLeftRadius: scale(20),
@@ -348,7 +346,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   img: {
-    marginTop: -scale(45), // Puxa a imagem pra cima do botão
+    marginTop: -scale(45), 
     width: scale(36),
     height: scale(40),
     resizeMode: 'contain',
@@ -363,14 +361,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   menuItem1: {
-    width: '32.5%', // 3 colunas com espaçamento
+    width: '32.5%', 
     marginBottom: scale(15),
   },
   menuItem: {
     backgroundColor: '#fff',
     borderRadius: scale(20),
     overflow: 'hidden',
-    height: scale(220), // Altura fixa proporcional
+    height: scale(220), 
     justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: scale(3) },
@@ -380,13 +378,13 @@ const styles = StyleSheet.create({
   },
   menuItemImage: {
     width: '100%',
-    height: '70%', // Ocupa 60% do card
+    height: '65%', 
     resizeMode: 'cover',
   },
   cardTextContainer: {
     flexDirection: 'row',
     width: '100%',
-    height: '30%',
+    height: '35%',
   },
   cardLeft: {
     width: '65%',
@@ -400,13 +398,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuItemName: {
-    fontSize: scale(13),
-    fontWeight: 'bold', // Aumentei peso para legibilidade
+    fontSize: scale(15),
+    fontWeight: 'bold', 
     color: '#333',
     flexShrink: 1, 
   },
   menuItemPrice: {
-    fontSize: scale(14),
+    fontSize: scale(16),
     fontWeight: 'bold',
     color: '#aa6c00ff',
   },
@@ -417,7 +415,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     borderBottomLeftRadius: 0,
-    borderBottomRightRadius: scale(20), // Match card radius
+    borderBottomRightRadius: scale(20), 
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -427,7 +425,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   addButtonText: {
-    fontSize: scale(14),
+    fontSize: scale(16),
     fontWeight: 'bold',
     color: "#FFFFFF",
     textAlign: 'center',
