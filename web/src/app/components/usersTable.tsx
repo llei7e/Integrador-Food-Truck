@@ -8,7 +8,7 @@ interface User {
   id?: number;
   nome: string;
   email: string;
-  cargo: string; // Admin, Cliente, Chapeiro ou outro
+  cargo: string;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -151,12 +151,12 @@ export default function UsersTable() {
 
       <div className="overflow-x-auto rounded-lg shadow-md">
         <table className="min-w-full bg-white border border-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-red-900">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cargo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Nome</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Email</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Cargo</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -167,9 +167,9 @@ export default function UsersTable() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                     user.cargo === 'ADMIN' ? 'bg-green-100 text-green-800' 
-                    : user.cargo === 'Chapeiro' ? 'bg-yellow-100 text-yellow-800'
-                    : user.cargo === 'Cliente' ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'  // Qualquer outro cargo
+                    : user.cargo === 'CHAPEIRO' ? 'bg-red-100 text-yellow-800'
+                    : user.cargo === 'USUARIO' ? 'bg-gray-100 text-gray-800'
+                    : 'bg-gray-100 text-gray-800'
                   }`}>
                     {user.cargo}
                   </span>

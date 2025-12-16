@@ -6,12 +6,12 @@ export default function HeaderButton() {
   const pathname = usePathname();
 
   return (
-    <>
+    <nav className="flex space-x-20">  {/*   */}
       <Link href="/sales">
         <button
-          className={`rounded-md py-3 px-5 cursor-pointer transition 
-            hover:bg-red-900
-            ${pathname === "/sales" ? "bg-red-900 text-white" : ""}`}
+          className={`rounded-md py-3 px-5 cursor-pointer transition-all duration-200 font-medium
+            hover:bg-red-900 hover:text-white focus:outline-none
+            ${pathname === "/sales" ? "bg-red-900 text-white shadow-md" : "text-gray-700 border-gray-300"}`}
         >
           Pedidos
         </button>
@@ -19,9 +19,9 @@ export default function HeaderButton() {
 
       <Link href="/stocks">
         <button
-          className={`rounded-md py-3 px-5 cursor-pointer transition 
-            hover:bg-red-900
-            ${pathname === "/stocks" ? "bg-red-900 text-white" : ""}`}
+          className={`rounded-md py-3 px-5 cursor-pointer transition-all duration-200 font-medium
+            hover:bg-red-900 hover:text-white focus:outline-none
+            ${pathname === "/stocks" ? "bg-red-900 text-white shadow-md" : "text-gray-700 border-gray-300"}`}
         >
           Estoque
         </button>
@@ -29,23 +29,23 @@ export default function HeaderButton() {
 
       <Link href="/trucks">
         <button
-          className={`rounded-md py-3 px-5 cursor-pointer transition 
-            hover:bg-red-900
-            ${pathname === "/trucks" ? "bg-red-900 text-white" : ""}`}
+          className={`rounded-md py-3 px-5 cursor-pointer transition-all duration-200 font-medium
+            hover:bg-red-900 hover:text-white focus:outline-none
+            ${pathname === "/trucks" ? "bg-red-900 text-white shadow-md" : "text-gray-700 border-gray-300"}`}
         >
           Trucks
         </button>
       </Link>
 
-            <Link href="/users">
+      <Link href="/users">
         <button
-          className={`rounded-md py-3 px-5 cursor-pointer transition 
-            hover:bg-red-900
-            ${pathname === "/trucks" ? "bg-red-900 text-white" : ""}`}
+          className={`rounded-md py-3 px-5 cursor-pointer transition-all duration-200 font-medium
+            hover:bg-red-900 hover:text-white focus:outline-none
+            ${pathname === "/users" ? "bg-red-900 text-white shadow-md" : "text-gray-700 border-gray-300"}`}
         >
           Usuários
         </button>
       </Link>
-    </>
+    </nav>
   );
 }

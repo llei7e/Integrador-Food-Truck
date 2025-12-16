@@ -9,12 +9,12 @@ import { useRouter } from "next/navigation";
 import { getTrucks } from "@/services/trucks";
 import { getPedidos, Pedido } from "@/services/pedidos";
 
-const MapView = dynamic(() => import('@/components/map'), {
+const MapTilerView = dynamic(() => import('@/components/map'), { 
   ssr: false,
   loading: () => <p>Carregando mapa...</p>,
 });
 
-const ChartTruck = dynamic(() => import('@/components/ChartTruck'), {
+const ChartTruck = dynamic(() => import('@/components/chartTruck'), {
   ssr: false,
   loading: () => <p>Carregando gráfico...</p>,
 });
@@ -22,7 +22,7 @@ const ChartTruck = dynamic(() => import('@/components/ChartTruck'), {
 interface Truck {
   id: number;
   localizacao: string;
-  ativo: boolean;
+  ativo: boolean | number;
   vendas?: number;
   pedidos?: number;
 }
@@ -32,17 +32,21 @@ export default function Trucks() {
   const [valorVendas, setValorVendas] = useState("Carregando ...");
   const [numeroPedidos, setNumeroPedidos] = useState("Carregando ...");
   const [statusTruck, setStatusTruck] = useState("Carregando ...");
+  const [statusTitle, setStatusTitle] = useState("Status do Truck");
 
   const [selectedTruck, setSelectedTruck] = useState("");
   const [trucksList, setTrucksList] = useState<Truck[]>([]);
   const [pedidosList, setPedidosList] = useState<Pedido[]>([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const isTruckSelected = !!selectedTruck;
 
   useEffect(() => {
-    const fetchData = async () => {
+    async function load() {
       try {
+        setLoadingList(true);
+        setError(null);
         console.log("Iniciando fetch de trucks e pedidos...");
         const [trucksData, pedidosData] = await Promise.all([
           getTrucks(),
@@ -53,9 +57,19 @@ export default function Trucks() {
 
         if (Array.isArray(trucksData) && trucksData.length > 0) {
           const trucksWithMetrics = trucksData.map((truck: Truck) => {
-            const pedidosDoTruck = pedidosData.filter((pedido: Pedido) => pedido.truckId === truck.id && pedido.status === "concluido");
-            const totalVendas = pedidosDoTruck.reduce((sum: number, pedido: Pedido) => sum + pedido.total, 0);
+            // 👈 Filter para status "FINALIZADO" (da API)
+            const pedidosDoTruck = pedidosData.filter((pedido: Pedido) => 
+              pedido.truckId === truck.id && pedido.status === "FINALIZADO"
+            );
+            console.log(`Pedidos para truck ${truck.id}:`, pedidosDoTruck.length);
+
+            const totalVendas = pedidosDoTruck.reduce((sum: number, pedido: Pedido) => {
+              const total = pedido.total || 0;
+              return sum + total;
+            }, 0);
             const numPedidos = pedidosDoTruck.length;
+
+            console.log(`Truck ${truck.id}: vendas=${totalVendas}, pedidos=${numPedidos}`);
 
             return {
               ...truck,
@@ -66,14 +80,35 @@ export default function Trucks() {
 
           setTrucksList(trucksWithMetrics);
           setPedidosList(pedidosData);
+
+          // 👈 Cálculos gerais (todos pedidos FINALIZADO)
+          const pedidosConcluidos = pedidosData.filter((pedido: Pedido) => 
+            pedido.status === "FINALIZADO"  // 👈 Matching API
+          );
+          console.log("pedidosConcluidos length:", pedidosConcluidos.length);
+
+          const totalVendas = pedidosConcluidos.reduce((sum: number, pedido: Pedido) => {
+            const total = pedido.total || 0;
+            return sum + total;
+          }, 0);
+          const totalPedidos = pedidosConcluidos.length;
+          const numTrucks = trucksData.length;
+
+          console.log(`Geral: totalVendas=${totalVendas}, totalPedidos=${totalPedidos}, numTrucks=${numTrucks}`);
+
+          setValorVendas(`R$ ${totalVendas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+          setNumeroPedidos(totalPedidos.toString());
+          setStatusTruck(numTrucks.toString());
+          setStatusTitle("Quantidade Truck");
         } else {
           setTrucksList([]);
           setPedidosList([]);
           setValorVendas("Nenhum truck cadastrado");
           setNumeroPedidos("Nenhum truck cadastrado");
           setStatusTruck("Nenhum truck cadastrado");
+          setStatusTitle("Status do Truck");
         }
-      } catch (error: unknown) { // 👈 Mudei de 'any' para 'unknown'
+      } catch (error: unknown) {
         console.error("Erro ao carregar dados:", error);
         const errMessage = error instanceof Error ? error.message : "Erro desconhecido";
         if (errMessage === "NO_TOKEN" || errMessage === "TOKEN_INVALID") {
@@ -82,23 +117,21 @@ export default function Trucks() {
           router.push('/');
           return;
         }
+        setError("Erro ao carregar dados. Tente novamente.");
         setValorVendas("Erro ao carregar lista");
         setNumeroPedidos("Erro ao carregar lista");
         setStatusTruck("Erro ao carregar lista");
+        setStatusTitle("Status do Truck");
       } finally {
         setLoadingList(false);
       }
-    };
-    fetchData();
+    }
+
+    load();
   }, [router]);
 
   useEffect(() => {
-    if (trucksList.length === 0) {
-      setValorVendas("Nenhum truck cadastrado");
-      setNumeroPedidos("Nenhum truck cadastrado");
-      setStatusTruck("Nenhum truck cadastrado");
-      return;
-    }
+    if (trucksList.length === 0 || loadingList) return;
 
     if (isTruckSelected) {
       const selectedTruckData = trucksList.find((truck) => truck.id.toString() === selectedTruck);
@@ -106,22 +139,31 @@ export default function Trucks() {
         setValorVendas("Nenhum dado disponível");
         setNumeroPedidos("Nenhum dado disponível");
         setStatusTruck("Nenhum dado disponível");
+        setStatusTitle("Status do Truck");
         return;
       }
       setValorVendas(`R$ ${selectedTruckData.vendas?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`);
       setNumeroPedidos((selectedTruckData.pedidos || 0).toString());
-      setStatusTruck(selectedTruckData.ativo ? "Ativo" : "Inativo");
+      setStatusTruck(selectedTruckData.ativo === 1 || selectedTruckData.ativo === 1 ? "Ativo" : "Inativo");
+      setStatusTitle("Status do Truck");
     } else {
-      const pedidosConcluidos = pedidosList.filter((pedido: Pedido) => pedido.status === "concluido");
-      const totalVendas = pedidosConcluidos.reduce((sum: number, pedido: Pedido) => sum + pedido.total, 0);
+      // 👈 Recalcula gerais
+      const pedidosConcluidos = pedidosList.filter((pedido: Pedido) => 
+        pedido.status === "FINALIZADO"
+      );
+      const totalVendas = pedidosConcluidos.reduce((sum: number, pedido: Pedido) => {
+        const total = pedido.total || 0;
+        return sum + total;
+      }, 0);
       const totalPedidos = pedidosConcluidos.length;
       const numTrucks = trucksList.length;
 
       setValorVendas(`R$ ${totalVendas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
       setNumeroPedidos(totalPedidos.toString());
       setStatusTruck(numTrucks.toString());
+      setStatusTitle("Quantidade Truck");
     }
-  }, [selectedTruck, trucksList, pedidosList, isTruckSelected]);
+  }, [selectedTruck, trucksList, pedidosList, isTruckSelected, loadingList]);
 
   const truckOptions = trucksList.map((truck) => ({
     value: truck.id.toString(),
@@ -129,7 +171,22 @@ export default function Trucks() {
   }));
 
   if (loadingList) {
-    return <div className="mr-4 ml-4"><p>Carregando lista de trucks...</p></div>;
+    return (
+      <div className="mr-4 ml-4">
+        <Header />
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mr-4 ml-4">
+        <Header />
+        <p className="text-red-500">{error}</p>
+        <button onClick={() => window.location.reload()}>Tentar novamente</button>
+      </div>
+    );
   }
 
   return (
@@ -147,7 +204,10 @@ export default function Trucks() {
       </div>
       <div className="flex">
         <div className="flex mt-2">
-          <MapView selectedTruckId={selectedTruck} trucksList={trucksList} />
+          <MapTilerView
+            trucksList={trucksList}
+            selectedTruckId={selectedTruck}
+          />
         </div>
         <div>
           <div className="flex">
@@ -164,7 +224,7 @@ export default function Trucks() {
               API_VALUE={numeroPedidos}
             />
             <Card
-              Title={"Status do Truck"}
+              Title={statusTitle}
               iconColor="gray"
               iconImage="streamline-plump:food-truck-event-fair"
               API_VALUE={statusTruck}
