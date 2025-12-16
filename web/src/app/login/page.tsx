@@ -41,16 +41,12 @@ export default function Login() {
         <div className="flex flex-col justify-center w-[70%] max-w-md">
           
           <div className="flex justify-center mb-5">
-            {/* --- CORREÇÃO AQUI --- */}
             <Image
               priority={true}
               src={logo}
               alt={"logo do Food Truck"}
-              // Mantém width/height originais para o Next saber a proporção e qualidade
               width={250} 
               height={250}
-              // A classe CSS abaixo FORÇA o tamanho visual correto
-              // w-40 equivale a 160px. Se quiser menor, use w-32 (128px)
               className="w-40 h-auto object-contain" 
             />
           </div>
