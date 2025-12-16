@@ -1,4 +1,3 @@
-// src/main/java/com/foodtruck/domain/model/Usuario.java
 package com.foodtruck.domain.model;
 
 import jakarta.persistence.*;
@@ -19,6 +18,6 @@ public class Usuario {
   private String name;
 
   @Column(nullable = false, length = 40)
-  private String cargo; // ex.: "cliente", "dono", "admin" — fica a seu critério
+  private String cargo; 
 
 }

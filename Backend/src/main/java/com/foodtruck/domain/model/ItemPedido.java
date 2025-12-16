@@ -23,7 +23,5 @@ public class ItemPedido {
     @Column(nullable = false)
     private Integer quantidade;
 
-    // --- CAMPO REMOVIDO ---
-    // @Column(name = "preco_unitario", nullable = false)
-    // private Integer precoUnitario;
+
 }
