@@ -6,7 +6,7 @@ export interface Produto {
     id: number;
     nome: string;
     preco: number;
-    ativo: boolean; // O Frontend continua vendo como boolean (true/false)
+    ativo: boolean; 
     categoriaId: number; 
     descricao: string;
 }
@@ -20,7 +20,6 @@ export function useProdutos() {
         try {
             const data = await api('/api/produtos', { auth: true }) as Produto[];
             
-            // Ordenação segura
             data.sort((a, b) => {
                 const catA = a.categoriaId ?? 0;
                 const catB = b.categoriaId ?? 0;
@@ -44,27 +43,22 @@ export function useProdutos() {
     const toggleAtivo = useCallback(async (produtoId: number, statusAtual: boolean) => {
         const novoStatus = !statusAtual;
 
-        // 1. Atualização Otimista (Visual): Aqui usamos boolean normal
         setProdutos(prev => prev.map(p => 
             p.id === produtoId ? { ...p, ativo: novoStatus } : p
         ));
         
-        try {
-            // --- CORREÇÃO AQUI ---
-            // O backend é "burro" e quer 0 ou 1? Então toma 0 ou 1!
-            // Convertemos: true vira 1, false vira 0
+        try { 
             const payload = { ativo: novoStatus ? 1 : 0 }; 
 
             await api(`/api/produtos/${produtoId}/ativo`, {
                 method: 'PATCH',
                 auth: true,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload) // Envia { "ativo": 1 } ou { "ativo": 0 }
+                body: JSON.stringify(payload) 
             });
 
         } catch (e) {
             console.error("Erro no toggleAtivo:", e);
-            // Reverte a mudança visual se der erro
             setProdutos(prev => prev.map(p => 
                 p.id === produtoId ? { ...p, ativo: statusAtual } : p
             ));

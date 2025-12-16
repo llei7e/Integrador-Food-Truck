@@ -6,12 +6,10 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useCart } from '../../context/CartContext'; 
 import { api } from '../../lib/api'; 
 
-// --- LÓGICA DE ESCALA MATEMÁTICA (VERTICAL) ---
 const { width, height } = Dimensions.get('window');
 const realWidth = width < height ? width : height; 
 const guidelineBaseWidth = 768; 
 const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
-// -------------------------------------
 
 export default function Pagamento() {
   const { cartItems, total: valorTotalCarrinho, clearCart } = useCart();
@@ -199,9 +197,6 @@ export default function Pagamento() {
         </View>
 
         <View style={styles.centerContainer}>
-            {/* AQUI ESTÁ A MUDANÇA PRINCIPAL:
-               Container mais largo (85%) e botões retangulares (sem aspectRatio)
-            */}
             <View style={styles.paymentContainer}>
                 <TouchableOpacity style={getMethodStyle('Pix')} onPress={() => setSelectedMethod('Pix')}>
                     <Ionicons name="qr-code" size={scale(60)} color={getIconColor('Pix')} />
@@ -265,7 +260,7 @@ export default function Pagamento() {
   );
 }
 
-// --- ESTILOS AJUSTADOS ---
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -299,13 +294,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  
-  // --- CONTAINER RETANGULAR ---
   paymentContainer: {
-    width: '80%', // Mais largo (retângulo)
+    width: '80%', 
     backgroundColor: 'white',
     borderRadius: scale(30),
-    padding: scale(40), // Menos padding para os botões crescerem
+    padding: scale(40), 
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between', 
@@ -317,19 +310,16 @@ const styles = StyleSheet.create({
     shadowRadius: scale(10),
     elevation: 6,
   },
-  
-  // --- BOTÕES RETANGULARES ---
   method: {
-    width: '48%', // Quase metade (2 por linha)
-    height: scale(220), // Altura fixa para criar o retângulo horizontal
-    // aspectRatio REMOVIDO para permitir formato livre
+    width: '48%', 
+    height: scale(220), 
+    
     borderWidth: scale(2),
     borderColor: '#A11613',
     borderRadius: scale(20),
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
   selected: {
     backgroundColor: '#A11613',
   },

@@ -3,7 +3,6 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
-// Ícone auxiliar
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
@@ -15,14 +14,11 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        // --- AQUI VOCÊ DECIDE A COR ---
-        tabBarActiveTintColor: '#A11613', // Cor do ícone SELECIONADO (Vermelho da sua marca)
-        tabBarInactiveTintColor: '#CCCCCC', // Cor do ícone NÃO selecionado (Cinza)
-        
-        // Garante que o fundo da barra seja branco para não dar conflito
+        tabBarActiveTintColor: '#A11613', 
+        tabBarInactiveTintColor: '#CCCCCC', 
         tabBarStyle: {
             backgroundColor: '#FFFFFF',
-            borderTopColor: '#e0e0e0', // Borda sutil no topo
+            borderTopColor: '#e0e0e0', 
         },
         headerShown: false, 
       }}
