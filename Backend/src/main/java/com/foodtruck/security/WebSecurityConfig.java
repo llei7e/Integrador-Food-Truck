@@ -1,4 +1,4 @@
-package com.foodtruck.config;
+package com.foodtruck.security;
 
 import com.foodtruck.security.AuthTokenFilter;
 import com.foodtruck.security.CustomOAuth2UserService;
