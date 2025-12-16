@@ -1,4 +1,3 @@
-// context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import * as Linking from "expo-linking";
@@ -7,16 +6,25 @@ import { BASE_URL } from "../lib/api";
 import { ApiError } from "../lib/api";
 import { getAuth, saveAuth, clearAuth } from "../lib/storage";
 
-type User = { id?: string; name?: string; email: string };
+// Garante que o navegador feche corretamente após o redirecionamento
+WebBrowser.maybeCompleteAuthSession();
+
+// Tipos
+type User = { 
+  id?: string; 
+  name?: string; 
+  email: string; 
+  cargo: 'CHAPEIRO' | 'USUARIO' | 'ADMIN' | string; 
+};
 
 type AuthCtx = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, role?: string) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  completeSocialLogin: (token: string, email?: string | null) => Promise<void>;
+  completeSocialLogin: (token: string, userRaw: any) => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -25,29 +33,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
+  // Helper para normalizar o cargo
+  const normalizeCargo = (role?: string) => {
+      if (!role) return "USUARIO";
+      const upper = role.toUpperCase();
+      if (upper === 'USER') return 'USUARIO';
+      return upper;
+  };
+
+  // 1. Restaura sessão ao abrir o app
+  useEffect(() => {
     (async () => {
       try {
-        // Limpa qualquer sessão anterior ao iniciar o app.
-        await clearAuth();
+        const saved = await getAuth();
+        if (saved && saved.token && saved.user) {
+          setUser(saved.user);
+        } else {
+          await clearAuth();
+        }
       } finally {
-        // Finaliza o carregamento para a tela de login aparecer.
         setLoading(false);
       }
     })();
   }, []);
 
-  // ---------- EMAIL/SENHA ----------
+  // 2. Login Tradicional (Email + Senha)
   async function signIn(email: string, password: string) {
-    const body = new URLSearchParams({
-      grant_type: "password",
-      username: email,
-      password,
-      scope: "",
-      client_id: "",
-      client_secret: "",
-    });
-
     const res = await fetch(`${BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: { Accept: "application/json", "Content-Type": "application/json" },
@@ -60,18 +71,27 @@ useEffect(() => {
     const token: string | undefined = data?.access_token || data?.accessToken || data?.token;
     if (!token) throw new ApiError("Token não retornado pelo login", 500, data);
 
-    const u: User = { email, name: data?.user?.name || "Usuário(a)", id: data?.user?.id };
+    const userData = data?.user;
+    const cargo = normalizeCargo(userData?.cargo || userData?.role);
+
+    const u: User = { 
+        email, 
+        name: userData?.name || "Usuário(a)", 
+        id: userData?.id,
+        cargo: cargo 
+    };
+
     await saveAuth(token, u, null);
     setUser(u);
   }
 
-  async function signUp(name: string, email: string, password: string) {
+  // 3. Cadastro
+  async function signUp(name: string, email: string, password: string, role: string = "USUARIO") {
     const res = await fetch(`${BASE_URL}/api/auth/register`, {
-        method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role: "user" }),
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password, cargo: role }), 
     });
-
 
     let data: any = null; try { data = await res.json(); } catch {}
     if (!res.ok) throw new ApiError(data?.message || data?.detail || `Erro ${res.status}`, res.status, data);
@@ -79,60 +99,70 @@ useEffect(() => {
     await signIn(email, password);
   }
 
+  // 4. Logout
   async function signOut() {
     await clearAuth();
     setUser(null);
   }
 
-  // ---------- GOOGLE ----------
-  // salva token vindo do callback e cria o usuário local
-  async function completeSocialLogin(token: string, email?: string | null) {
-    const u: User = { email: email ?? "email@desconhecido.com", name: "Usuário(a)" };
-    await saveAuth(token, u, null);
-    setUser(u);
+  // 5. Finalização do Login Social (Chamado pela tela oauth-google)
+  async function completeSocialLogin(token: string, userRaw: any) {
+    const data = (typeof userRaw === 'object') ? userRaw : { email: userRaw };
+    const cargo = normalizeCargo(data?.cargo || data?.role);
+
+    const u: User = {
+      email: data?.email ?? "email@desconhecido.com",
+      name: data?.name ?? "Usuário(a)",
+      id: data?.id ? String(data.id) : undefined,
+      cargo: cargo 
+    };
+    
+    await saveAuth(token, u, null);  
+    setUser(u);                      
   }
 
+  // 6. Início do Login com Google (Ajustado para AWS + nip.io)
   async function signInWithGoogle() {
-    // URL de retorno:
-    // - Web: usa a origem atual (porta correta, ex. 8081)
-    // - Nativo: usa um deep link do app (expo-router)
-    const redirectUri =
-      Platform.OS === "web"
-        ? `${window.location.origin}/oauth-google`
-        : Linking.createURL("/oauth-google");
+    // A) URL que o Backend deve chamar para devolver o usuário para o App
+    const redirectUri = Linking.createURL("/oauth-google");
+    
+    // B) URL Base "Fake" usando nip.io para enganar a validação de IP do Google Cloud
+    // Isso aponta para o seu IP da AWS: 54.146.16.231
+    const BASE_URL_AUTH = "http://54.146.16.231.nip.io:8080";
 
-    const authUrl = `${BASE_URL}/auth/google/login?redirect=${encodeURIComponent(redirectUri)}`;
+    // C) Monta a URL de autorização do Spring Security
+    // O parametro redirect_uri aqui diz pro Spring: "Depois de falar com o Google, volte para o App"
+    const authUrl = `${BASE_URL_AUTH}/oauth2/authorization/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
+    // Se for Web, redireciona direto
     if (Platform.OS === "web") {
-      // abre na mesma aba; o backend vai redirecionar de volta para /oauth-google
       window.location.href = authUrl;
       return;
     }
 
-    // Em nativo, abrimos a sessão e capturamos a URL de retorno
+    // Se for Mobile, abre o navegador interno
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
+    // D) Processamento do Retorno (Caso o deep link funcione diretamente aqui)
     if (result.type === "success" && result.url) {
       const parsed = Linking.parse(result.url);
       const qp = parsed.queryParams || {};
 
-      let token = (qp.access_token || qp.token) as string | undefined;
-      let email = (qp.email as string | undefined) ?? null;
+      if (qp.payload) {
+          try {
+              const jsonStr = decodeURIComponent(qp.payload as string);
+              const data = JSON.parse(jsonStr);
+              const token = data.access_token;
+              const userRaw = data.user; 
 
-      // fallback: caso o backend devolva no hash #access_token
-      if (!token) {
-        try {
-          const url = new URL(result.url);
-          const h = new URLSearchParams(url.hash.replace(/^#/, ""));
-          token = token || (h.get("access_token") ?? h.get("token") ?? undefined);
-          email = email || h.get("email");
-        } catch {}
+              if (token && userRaw) {
+                  await completeSocialLogin(token, userRaw);
+                  return;
+              }
+          } catch (e) {
+              console.error("Erro no parse do payload Google:", e);
+          }
       }
-
-      if (!token) throw new Error("Token ausente no retorno do Google.");
-      await completeSocialLogin(token, email);
-    } else {
-      throw new Error("Login com Google cancelado.");
     }
   }
 

@@ -22,7 +22,7 @@ public class Produto {
     private String descricao;
 
     @Column(nullable = false)
-    private Integer preco; // centavos
+    private Double preco; // centavos
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoria_id", nullable = false)

@@ -1,26 +1,53 @@
 "use client";
-import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import { useState } from "react";
+import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import React from 'react';
 
-export default function MapView() {
+interface MapViewProps {
+  selectedTruckId?: string;
+  trucksList: { id: number; localizacao: string; ativo: boolean }[]; // Lista para plotar markers
+}
+
+const mapContainerStyle = {
+  width: "100%",
+  height: "100%",
+  borderRadius: "30px",
+};
+
+const center = { lat: -23.55052, lng: -46.633308 }; // São Paulo default
+
+const getCoordsFromLocalizacao = (localizacao: string): { lat: number; lng: number } => {
+  if (localizacao.includes("Cidade X")) return { lat: -23.55052, lng: -46.633308 };
+  return center;
+};
+
+export default function MapView({ selectedTruckId, trucksList }: MapViewProps) {
   const [showMap, setShowMap] = useState(false);
+  if (!trucksList || !Array.isArray(trucksList)) {
+    return (
+      <div
+        style={{
+          height: "510px",
+          width: "400px",
+          borderRadius: "30px",
+          backgroundColor: "#d1d5db",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <p>Carregando trucks...</p> {/*  */}
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (L.Icon.Default.prototype as any)._getIconUrl; //ignore eslint
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl:
-          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-        iconUrl:
-          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-        shadowUrl:
-          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-      });
-    }
-  }, []);
+  const filteredTrucks = selectedTruckId 
+    ? trucksList.filter((truck) => truck.id.toString() === selectedTruckId)
+    : trucksList;
+
+  const mapCenter = filteredTrucks.length > 0 
+    ? getCoordsFromLocalizacao(filteredTrucks[0].localizacao)
+    : center;
 
   return (
     <div
@@ -28,7 +55,7 @@ export default function MapView() {
         height: "510px",
         width: "400px",
         borderRadius: "30px",
-        backgroundColor: "#d1d5db", // cinza (Tailwind gray-300)
+        backgroundColor: "#d1d5db",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -51,20 +78,28 @@ export default function MapView() {
           Visualizar mapa
         </button>
       ) : (
-        <MapContainer
-          key="map"
-          center={[-23.55052, -46.633308] as [number, number]}
-          zoom={13}
-          style={{ height: "100%", width: "100%", borderRadius: "30px" }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <Marker position={[-23.55052, -46.633308]}>
-            <Popup>São Paulo</Popup>
-          </Marker>
-        </MapContainer>
+        <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={mapCenter}
+            zoom={13}
+            options={{
+              styles: [],
+            }}
+          >
+            {filteredTrucks.map((truck) => {
+              const position = getCoordsFromLocalizacao(truck.localizacao);
+              return (
+                <Marker
+                  key={truck.id}
+                  position={position}
+                  title={`Truck ${truck.id} - ${truck.localizacao}`}
+                  icon={truck.ativo ? undefined : { url: "/inactive-marker.png" }}
+                />
+              );
+            })}
+          </GoogleMap>
+        </LoadScript>
       )}
     </div>
   );

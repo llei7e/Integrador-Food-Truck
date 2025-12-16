@@ -4,20 +4,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { AuthProvider } from '../context/AuthContext';
-
-// Este componente não é mais necessário aqui, a lógica foi movida
-// function AppStack() { ... }
+import { CartProvider } from '../context/CartContext'; // --- 1. IMPORTE O CartProvider ---
 
 function Frame() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <StatusBar style="dark" />
-      {/* A Stack agora define os grupos de rotas principais.
-        O Expo Router e os layouts de cada grupo cuidarão do resto.
-      */}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(protected)" />
+        {/* --- 2. ADICIONE A TELA DE DETALHES AQUI --- */}
+        {/* Isso permite que ela seja aberta "por cima" das abas */}
+        <Stack.Screen 
+          name="detalhesProduto" 
+          options={{ 
+            headerShown: false, // O seu código 'detalhesProduto' já esconde isso
+            presentation: 'modal', // Faz a tela deslizar de baixo para cima
+          }} 
+        />
       </Stack>
     </SafeAreaView>
   );
@@ -26,7 +30,10 @@ function Frame() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Frame />
+      {/* --- 3. ADICIONE O CartProvider AQUI --- */}
+       <CartProvider> 
+        <Frame />
+       </CartProvider>
     </AuthProvider>
   );
 }

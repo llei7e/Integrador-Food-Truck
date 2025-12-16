@@ -1,4 +1,3 @@
-// src/main/java/com/foodtruck/entity/User.java
 package com.foodtruck.entity;
 
 import jakarta.persistence.*;
@@ -14,18 +13,21 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // nome exibido no app
     @Column(nullable = false)
     private String name;
 
-    // credencial principal
     @Column(nullable = false, unique = true, length = 180)
     private String email;
 
     @Column(nullable = false)
     private String password;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    // --- NOVO CAMPO: CARGO ---
+    @Column(name = "cargo", length = 20)
+    private String cargo; 
+    // -------------------------
+
+    @ManyToMany(fetch = FetchType.LAZY) // Mudei para EAGER se precisar das roles no login, mas LAZY é o padrão
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
@@ -40,6 +42,8 @@ public class User {
     }
 
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; } // Adicionei setId caso precise
+
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
@@ -48,6 +52,11 @@ public class User {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    // --- GETTER E SETTER DO CARGO ---
+    public String getCargo() { return cargo; }
+    public void setCargo(String cargo) { this.cargo = cargo; }
+    // --------------------------------
 
     public Set<Role> getRoles() { return roles; }
     public void setRoles(Set<Role> roles) { this.roles = roles; }
