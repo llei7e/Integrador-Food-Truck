@@ -44,9 +44,8 @@ try {
               priority={true}
               src={logo}
               alt={"logo do Food Truck"}
-              width={150}
-              height={150}
-              style={{ width: 'auto', height: 'auto' }}
+              width={250}
+              height={250}
             />
           </div>
           <SelectButton
