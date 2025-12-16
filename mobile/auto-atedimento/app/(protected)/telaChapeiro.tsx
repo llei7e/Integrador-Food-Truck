@@ -8,12 +8,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
 import * as ScreenOrientation from 'expo-screen-orientation';
 
-// --- LÓGICA DE ESCALA MATEMÁTICA ---
 const { width, height } = Dimensions.get('window');
 const realWidth = width > height ? width : height;
 const guidelineBaseWidth = 1366;
 const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
-// -------------------------------------
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -250,7 +248,6 @@ export default function ChapeiroScreen() {
 
     return (
       <View key={pedido.id} style={[styles.card, isFinalizado && styles.cardDimmed]}>
-        {/* PARTE SUPERIOR (FLEX 1): Cresce para ocupar espaço, e permite scroll na lista */}
         <View style={styles.cardTopContent}>
             <Text style={styles.cardTitle}>#{pedido.id}</Text>
             <View style={[styles.statusBadge, { borderColor: statusColor }]}>
@@ -260,7 +257,6 @@ export default function ChapeiroScreen() {
             <View style={styles.itemsContainer}>
                 <Text style={styles.sectionTitle}>Descrição do pedido</Text>
                 
-                {/* AQUI ESTÁ A MUDANÇA: ScrollView para a lista de itens */}
                 <ScrollView 
                     nestedScrollEnabled={true} 
                     showsVerticalScrollIndicator={true}
@@ -474,16 +470,16 @@ const styles = StyleSheet.create({
     height: '90%', 
     backgroundColor: 'white', borderRadius: scale(25),
     padding: scale(20), 
-    justifyContent: 'space-between', // Mantém Header em cima, Footer embaixo
+    justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: scale(5) }, shadowOpacity: 0.3, shadowRadius: scale(5),
     elevation: 5, marginVertical: scale(20),
   },
   
-  // NOVO ESTILO: Container Superior Flexível
+
   cardTopContent: {
-    flex: 1, // Ocupa todo o espaço sobrando
-    overflow: 'hidden', // Evita que texto vaze por cima do footer
+    flex: 1, 
+    overflow: 'hidden',
   },
 
   cardDimmed: { backgroundColor: '#e0e0e0', opacity: 0.9 },
@@ -496,12 +492,12 @@ const styles = StyleSheet.create({
   statusText: { fontSize: scale(16), fontWeight: 'bold', textTransform: 'uppercase' },
   
   itemsContainer: { 
-    flex: 1, // Permite que a view da descrição cresça
+    flex: 1,
     marginBottom: scale(5) 
   },
   
   sectionTitle: { fontSize: scale(18), textDecorationLine: 'underline', marginBottom: scale(8), fontWeight: '600' },
-  itemText: { fontSize: scale(18), marginBottom: scale(5), fontWeight: 'bold', color: '#333' },
+  itemText: { fontSize: scale(18), marginBottom: scale(5), fontWeight: '500', color: '#333' },
   
   paymentContainer: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

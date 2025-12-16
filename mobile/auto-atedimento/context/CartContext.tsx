@@ -1,7 +1,5 @@
-// context/CartContext.tsx
 import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
 
-// Define a interface do Produto (baseado no seu home.tsx)
 interface Produto {
   id: number;
   nome: string;
@@ -11,13 +9,11 @@ interface Produto {
   categoriaId: number; 
 }
 
-// Define o item do carrinho, que inclui o produto e a quantidade
 export interface CartItem {
   produto: Produto;
   quantity: number;
 }
 
-// Define o que o contexto irá fornecer
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (produto: Produto, quantity: number) => void;
@@ -28,21 +24,16 @@ interface CartContextType {
   itemCount: number;
 }
 
-// Cria o Contexto
 const CartContext = createContext<CartContextType | null>(null);
 
-// Cria o Provedor
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  // --- FUNÇÕES MEMOIZADAS COM useCallback ---
-
   const removeFromCart = useCallback((produtoId: number) => {
-    // Usa a forma funcional do setState para evitar dependência de 'cartItems'
     setCartItems(currentItems => 
       currentItems.filter(item => item.produto.id !== produtoId)
     );
-  }, []); // Dependência vazia, função estável
+  }, []); 
 
   const updateQuantity = useCallback((produtoId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -54,30 +45,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         )
       );
     }
-  }, [removeFromCart]); // Depende do 'removeFromCart' (que é estável)
+  }, [removeFromCart]); 
 
   const addToCart = useCallback((produto: Produto, quantity: number) => {
     setCartItems(currentItems => {
       const existingItem = currentItems.find(item => item.produto.id === produto.id);
 
       if (existingItem) {
-        // Se já existe, atualiza a quantidade
         const newQuantity = existingItem.quantity + quantity;
         return currentItems.map(item =>
           item.produto.id === produto.id ? { ...item, quantity: newQuantity } : item
         );
       } else {
-        // Se não existe, adiciona como novo item
         return [...currentItems, { produto, quantity }];
       }
     });
-  }, []); // Dependência vazia, função estável
+  }, []); 
 
   const clearCart = useCallback(() => {
     setCartItems([]);
-  }, []); // Dependência vazia, função estável
-
-  // --- CÁLCULOS MEMOIZADOS com useMemo ---
+  }, []); 
 
   const total = useMemo(() => {
     return cartItems.reduce((sum, item) => sum + item.produto.preco * item.quantity, 0);
@@ -86,9 +73,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const itemCount = useMemo(() => {
     return cartItems.reduce((sum, item) => sum + item.quantity, 0);
   }, [cartItems]);
-
-  // --- OBJETO DE VALOR MEMOIZADO com useMemo ---
-  // Isso garante que o objeto de contexto só mude quando os dados mudarem
+ 
   const value = useMemo(() => ({
     cartItems,
     addToCart,
@@ -102,7 +87,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
-// Hook customizado para facilitar o uso do contexto
 export function useCart() {
   const context = useContext(CartContext);
   if (!context) {

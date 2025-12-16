@@ -1,20 +1,14 @@
-// app/detalhesProduto.tsx
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ImageSourcePropType, Dimensions } from 'react-native';
 import { useLocalSearchParams, useNavigation, Stack, router} from 'expo-router';
 import { useEffect, useState } from 'react'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../../context/CartContext'; 
 
-// --- LÓGICA DE ESCALA MATEMÁTICA (VERTICAL) ---
 const { width, height } = Dimensions.get('window');
-// Garante que pegamos a menor dimensão (largura em modo retrato)
 const realWidth = width < height ? width : height; 
-// 768px é a largura base de um iPad/Tablet padrão em Retrato.
 const guidelineBaseWidth = 768; 
 const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
-// -------------------------------------
 
-// Copiamos a lógica de imagens e tipos do home.tsx
 interface Produto {
   id: number;
   nome: string;
@@ -49,7 +43,6 @@ export default function DetalhesProduto() {
   const { addToCart } = useCart(); 
   const [quantity, setQuantity] = useState(1); 
 
-   // Atualiza o título da página para o nome do item
    useEffect(() => {
        navigation.setOptions({ title: produto.nome });
    }, [produto.nome]);
@@ -112,12 +105,10 @@ export default function DetalhesProduto() {
   );
 }
 
-// --- ESTILOS COM SCALE ---
 const styles = StyleSheet.create({
     containerFull: { flex: 1, backgroundColor: 'white' },
-    
     image: { 
-        height: scale(500),  // Altura proporcional
+        height: scale(500),  
         width: '100%'
     },
     
@@ -133,26 +124,23 @@ const styles = StyleSheet.create({
         marginTop: scale(10), 
         fontWeight: 'bold' 
     },
-    
     logo: { 
         height: scale(160), 
         width: scale(150), 
         resizeMode: 'contain'
     },
-    
     backButton: {
         position: 'absolute',
         left: scale(30),
-        top: scale(40), // Ajustado para não colar no topo
+        top: scale(40), 
         zIndex: 1,  
         backgroundColor: '#201000ff',
         borderRadius: scale(80),
         height: scale(70),
-        width: scale(70), // Adicionado width para ficar redondo
+        width: scale(70), 
         alignItems: 'center',
-        justifyContent: 'center', // Centraliza o ícone
+        justifyContent: 'center', 
     },
-    
     logoPosition: {
         width: '100%',
         paddingHorizontal: scale(30),
@@ -162,11 +150,9 @@ const styles = StyleSheet.create({
         marginTop: -scale(80),  
         marginBottom: -scale(60) 
     },
-    
     containerInfos:{
         paddingHorizontal: scale(40) 
     },
-    
     description:{
         marginTop: scale(15),
         fontSize: scale(18),
@@ -174,8 +160,6 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         color: '#555'
     },
-    
-    // --- BOTÕES INFERIORES ---
     containerCartButtons: {
         position: 'absolute',
         bottom: scale(20), 
@@ -186,7 +170,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent', 
         paddingHorizontal: scale(50),
     },
-    
     quantityButton: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -195,7 +178,7 @@ const styles = StyleSheet.create({
         backgroundColor: "white",    
         borderColor: "#A11613",      
         borderWidth: scale(3),              
-        width: '30%', // Proporcional
+        width: '30%', 
         height: scale(80),
         borderRadius: scale(50),
         shadowColor: '#000', 
@@ -203,28 +186,24 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5,
         shadowRadius: scale(8),       
     },
-    
     addProduct:{
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: scale(5),
     },
-    
     addProduct1:{
         alignItems: 'center',
         justifyContent: 'center',
     },
-    
     addButtonText:{
         fontSize: scale(60),
         color:"#A11613",
-        lineHeight: scale(70), // Ajuste fino para centralizar verticalmente o +
+        lineHeight: scale(70), 
         marginTop: -scale(5)
     },
-    
     addCartButton:{
         backgroundColor: "#A11613",
-        width: '55%', // Proporcional (40% + 55% + gap = 100% aprox)
+        width: '55%', 
         height: scale(80),
         borderRadius: scale(50),
         justifyContent: 'center',
@@ -234,21 +213,18 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5,
         shadowRadius: scale(8),
     },
-    
     addCartText:{
         color: 'white',
         fontSize: scale(20),
         fontWeight: 'bold',
         textAlign: 'center'
     },
-    
     quantityText:{
         color: 'black',
         fontSize: scale(30),
         fontWeight: 'bold'
     },
-    
     footer:{
-        height: scale(150) // Espaço para não cobrir conteúdo com os botões
+        height: scale(150) 
     }
 });

@@ -5,12 +5,10 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
 
-// --- LÓGICA DE ESCALA MATEMÁTICA (A MESMA DA TELA DO CHAPEIRO) ---
 const { width, height } = Dimensions.get('window');
 const realWidth = width > height ? width : height;
-const guidelineBaseWidth = 1366; // Base do iPad Pro
+const guidelineBaseWidth = 1366; 
 const scale = (size: number) => (realWidth / guidelineBaseWidth) * size;
-// ------------------------------------------------------------------
 
 interface Produto {
   id: number;
@@ -132,7 +130,6 @@ export default function DefinicaoProdutos() {
                             styles.statusBadge, 
                             { backgroundColor: isAtivo ? "#28a745" : "#555" }
                         ]}>
-                            {/* Ajuste no tamanho do ícone com scale */}
                             <Ionicons 
                                 name={isAtivo ? "eye" : "eye-off"} 
                                 size={scale(12)} 
@@ -188,15 +185,13 @@ export default function DefinicaoProdutos() {
     );
 }
 
-// --- ESTILOS COM SCALE APLICADO ---
+
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f0f0f0' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#201000' },
     loadingText: { color: 'white', marginTop: scale(10), fontSize: scale(16) },
-    
-    // Header
     header: {
-        height: scale(100), // Altura ajustada proporcionalmente
+        height: scale(100), 
         backgroundColor: '#201000',
         flexDirection: 'row',
         alignItems: 'center',
@@ -205,7 +200,6 @@ const styles = StyleSheet.create({
     },
     headerLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(15) },
     headerTitle: { fontSize: scale(32), fontWeight: 'bold', color: 'white' },
-    
     navButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -216,11 +210,9 @@ const styles = StyleSheet.create({
         gap: scale(8),
         position: 'absolute',
         left: scale(20),
-        // bottom: scale(20),
+        
     },
     navButtonText: { fontSize: scale(20), fontWeight: '500', color: 'black' },
-
-    // Content
     scrollContent: { padding: scale(15), paddingBottom: scale(50) },
     helperText: { textAlign: 'center', color: '#666', marginBottom: scale(20), fontStyle: 'italic', fontSize: scale(16) },
     grid: {
@@ -228,10 +220,8 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         justifyContent: 'space-between',
     },
-
-    // Card
     card: {
-        width: '48%', // Mantido % para garantir 2 colunas no grid, mas o interior escala
+        width: '48%', 
         backgroundColor: 'white',
         borderRadius: scale(15),
         marginBottom: scale(15),
@@ -252,7 +242,7 @@ const styles = StyleSheet.create({
     },
     cardImage: {
         width: '100%',
-        height: scale(130), // Altura da imagem escala
+        height: scale(130), 
         resizeMode: 'cover',
     },
     cardContent: {
