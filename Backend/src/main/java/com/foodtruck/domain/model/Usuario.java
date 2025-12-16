@@ -18,6 +18,9 @@ public class Usuario {
   private String name;
 
   @Column(nullable = false, length = 40)
-  private String cargo; 
+  private String cargo;
 
+  @Column(nullable = false, length = 120, unique = true)
+  private String email;
 }
+

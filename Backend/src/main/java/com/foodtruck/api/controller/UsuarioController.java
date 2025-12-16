@@ -10,6 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
+
 import java.util.List;
 
 // Controller responsável pelo gerenciamento de usuários
@@ -62,5 +65,20 @@ public class UsuarioController {
 
     service.deletar(id);
     return ResponseEntity.noContent().build(); 
+  }
+
+  public record UsuarioPatchDto(
+    @Size(min = 1, message = "name não pode ser vazio") String name,
+    @Email(message = "email inválido") String email,
+    @Size(min = 1, message = "cargo não pode ser vazio") String cargo
+) {}
+
+  @PatchMapping("/{id}")
+  public ResponseEntity<Usuario> patch(@PathVariable Long id,
+                                      @RequestBody @Valid UsuarioPatchDto dto) {
+
+    return service.atualizarParcial(id, dto)
+        .map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
   }
 }
