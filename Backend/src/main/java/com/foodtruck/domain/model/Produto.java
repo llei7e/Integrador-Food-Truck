@@ -22,16 +22,16 @@ public class Produto {
     private String descricao;
 
     @Column(nullable = false)
-    private Double preco; // centavos
+    private Double preco; 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoria_id", nullable = false)
-    @JsonIgnore // evita serializar o objeto Categoria inteiro
+    @JsonIgnore 
     private Categoria categoria;
 
     private Boolean ativo = true;
 
-    // 👇 Getter adicional para expor apenas o ID da categoria no JSON
+    
     @JsonProperty("categoriaId")
     public Long getCategoriaId() {
         return categoria != null ? categoria.getId() : null;
