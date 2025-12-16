@@ -1,7 +1,7 @@
 export interface Truck {
   id: number;
   localizacao: string;
-  ativo: boolean;
+  ativo: number;
   vendas?: number;
   pedidos?: number;
 }

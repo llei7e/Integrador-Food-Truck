@@ -63,9 +63,9 @@ export default function RegisterPage() {
               priority={true}
               src={logo}
               alt={"logo do Food Truck"}
-              width={150}
-              height={150}
-              style={{ width: 'auto', height: 'auto' }}
+              width={250} 
+              height={250}
+              className="w-40 h-auto object-contain" 
             />
           </div>
 
