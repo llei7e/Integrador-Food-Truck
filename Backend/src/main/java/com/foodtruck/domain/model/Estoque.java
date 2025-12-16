@@ -18,8 +18,8 @@ public class Estoque {
   private Produto produto;
 
   @Column(nullable = false)
-  private Integer quantidade; // unidades no estoque
+  private Integer quantidade; 
 
   @Column(length = 20)
-  private String unidade; // ex.: "UN", "KG", "L" (opcional)
+  private String unidade; 
 }
