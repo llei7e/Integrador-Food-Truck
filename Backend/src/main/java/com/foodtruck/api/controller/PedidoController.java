@@ -1,67 +1,89 @@
 package com.foodtruck.api.controller;
 
-import com.foodtruck.api.dto.PedidosDto; // --- 1. Importar o DTO ---
+import com.foodtruck.api.dto.PedidosDto; 
 import com.foodtruck.domain.model.Pedido;
 import com.foodtruck.domain.service.PedidoService;
-import com.foodtruck.security.UserDetailsImpl; // --- 2. Importar UserDetailsImpl ---
+import com.foodtruck.security.UserDetailsImpl; 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal; // --- 3. Importar @AuthenticationPrincipal ---
+import org.springframework.security.core.annotation.AuthenticationPrincipal; 
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// Controller responsável pelo gerenciamento de pedidos
 @RestController
 @RequestMapping("/api/pedidos")
 @RequiredArgsConstructor
 @Validated
 public class PedidoController {
 
+    // Serviço com a lógica de negócio dos pedidos
     private final PedidoService pedidoService;
-    private final PedidoMapper pedidoMapper; // --- 4. Injetar o Mapper (ver abaixo) ---
 
-    // --- REMOVIDOS os records DTO internos ---
+    // Mapper responsável por converter entidade em DTO
+    private final PedidoMapper pedidoMapper; 
 
+    // Endpoint para criação de um novo pedido
     @PostMapping
     public ResponseEntity<PedidosDto.PedidoView> criar(
             @RequestBody @Valid PedidosDto.CriarPedidoRequest dto,
-            @AuthenticationPrincipal UserDetailsImpl principal // --- 5. Injetar usuário ---
+            @AuthenticationPrincipal UserDetailsImpl principal 
     ) {
+        // Garante que o usuário esteja autenticado
         if (principal == null) {
-            return ResponseEntity.status(401).build(); // Segurança extra
+            return ResponseEntity.status(401).build(); 
         }
         
-        // --- 6. Chamar o novo service ---
+        // Cria o pedido associado ao usuário logado
         Pedido p = pedidoService.criar(dto, principal);
         
-        // --- 7. Retornar o DTO de Resposta (PedidoView) ---
-        return ResponseEntity.status(201).body(pedidoMapper.toPedidoView(p));
+        // Retorna o pedido criado no formato de visualização
+        return ResponseEntity.status(201)
+                .body(pedidoMapper.toPedidoView(p));
     }
 
+    // Endpoint para listar todos os pedidos
     @GetMapping
     public ResponseEntity<List<PedidosDto.PedidoView>> listar() {
+        // Busca todos os pedidos no sistema
         List<Pedido> pedidos = pedidoService.listar();
-        // Converte a lista de Entidades para uma lista de DTOs de View
-        return ResponseEntity.ok(pedidos.stream().map(pedidoMapper::toPedidoView).toList());
+       
+        // Converte os pedidos para DTO antes de retornar
+        return ResponseEntity.ok(
+                pedidos.stream()
+                       .map(pedidoMapper::toPedidoView)
+                       .toList()
+        );
     }
 
+    // Endpoint para remover um pedido pelo ID
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
-        if (!pedidoService.existe(id)) return ResponseEntity.notFound().build();
+        // Verifica se o pedido existe antes de excluir
+        if (!pedidoService.existe(id)) {
+            return ResponseEntity.notFound().build();
+        }
+
         pedidoService.deletar(id);
-        return ResponseEntity.noContent().build(); // 204
+        return ResponseEntity.noContent().build(); 
     }
 
-
+    // Endpoint para atualizar o status de um pedido
     @PatchMapping("/{id}/status")
     public ResponseEntity<PedidosDto.PedidoView> atualizarStatus(
         @PathVariable Long id,
         @RequestBody PedidosDto.AtualizarStatusRequest dto
     ) {
-        Pedido pedidoAtualizado = pedidoService.atualizarStatus(id, dto.status());
-        return ResponseEntity.ok(pedidoMapper.toPedidoView(pedidoAtualizado));
-    }
+        // Atualiza o status do pedido
+        Pedido pedidoAtualizado =
+                pedidoService.atualizarStatus(id, dto.status());
 
+        // Retorna o pedido atualizado
+        return ResponseEntity.ok(
+                pedidoMapper.toPedidoView(pedidoAtualizado)
+        );
+    }
 }
