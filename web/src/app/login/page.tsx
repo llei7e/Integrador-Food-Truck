@@ -19,19 +19,19 @@ export default function Login() {
 
   const router = useRouter();
 
-async function handleLogin() {
-try {
-  setLoading(true);
-  setErro(null);
+  async function handleLogin() {
+    try {
+      setLoading(true);
+      setErro(null);
 
-  router.push("/sales");
-} catch (e: unknown) {
-  const errorMessage = e instanceof Error ? e.message : "Erro ao fazer login.";
-  setErro(errorMessage);
-} finally {
-  setLoading(false);
-}
-}
+      router.push("/sales");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Erro ao fazer login.";
+      setErro(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="flex h-dvh w-full">
@@ -39,16 +39,18 @@ try {
 
       <div className="w-full md:w-2/5 bg-[#EFEAEA] flex items-center justify-center">
         <div className="flex flex-col justify-center w-[70%] max-w-md">
+          
           <div className="flex justify-center mb-5">
             <Image
               priority={true}
               src={logo}
               alt={"logo do Food Truck"}
-              width={150}
-              height={150}
-              style={{ width: 'auto', height: 'auto' }}
+              width={250} 
+              height={250}
+              className="w-40 h-auto object-contain" 
             />
           </div>
+
           <SelectButton
             colorButton1="bg-[#E7E5E5]"
             colorButton2="bg-[#EA2626]"
