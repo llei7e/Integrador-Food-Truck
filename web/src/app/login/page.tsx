@@ -19,19 +19,19 @@ export default function Login() {
 
   const router = useRouter();
 
-async function handleLogin() {
-try {
-  setLoading(true);
-  setErro(null);
+  async function handleLogin() {
+    try {
+      setLoading(true);
+      setErro(null);
 
-  router.push("/sales");
-} catch (e: unknown) {
-  const errorMessage = e instanceof Error ? e.message : "Erro ao fazer login.";
-  setErro(errorMessage);
-} finally {
-  setLoading(false);
-}
-}
+      router.push("/sales");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Erro ao fazer login.";
+      setErro(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="flex h-dvh w-full">
@@ -39,15 +39,22 @@ try {
 
       <div className="w-full md:w-2/5 bg-[#EFEAEA] flex items-center justify-center">
         <div className="flex flex-col justify-center w-[70%] max-w-md">
+          
           <div className="flex justify-center mb-5">
+            {/* --- CORREÇÃO AQUI --- */}
             <Image
               priority={true}
               src={logo}
               alt={"logo do Food Truck"}
-              width={250}
+              // Mantém width/height originais para o Next saber a proporção e qualidade
+              width={250} 
               height={250}
+              // A classe CSS abaixo FORÇA o tamanho visual correto
+              // w-40 equivale a 160px. Se quiser menor, use w-32 (128px)
+              className="w-40 h-auto object-contain" 
             />
           </div>
+
           <SelectButton
             colorButton1="bg-[#E7E5E5]"
             colorButton2="bg-[#EA2626]"
