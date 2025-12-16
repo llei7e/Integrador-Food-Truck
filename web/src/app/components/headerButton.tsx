@@ -36,6 +36,16 @@ export default function HeaderButton() {
           Trucks
         </button>
       </Link>
+
+            <Link href="/users">
+        <button
+          className={`rounded-md py-3 px-5 cursor-pointer transition 
+            hover:bg-red-900
+            ${pathname === "/trucks" ? "bg-red-900 text-white" : ""}`}
+        >
+          Usuários
+        </button>
+      </Link>
     </>
   );
 }
