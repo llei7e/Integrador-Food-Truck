@@ -14,7 +14,7 @@ const MapTilerView = dynamic(() => import('@/components/map'), {
   loading: () => <p>Carregando mapa...</p>,
 });
 
-const ChartTruck = dynamic(() => import('@/components/chartTruck'), {
+const ChartTruck = dynamic(() => import('@/components/ChartTruck'), {
   ssr: false,
   loading: () => <p>Carregando gráfico...</p>,
 });
@@ -57,7 +57,6 @@ export default function Trucks() {
 
         if (Array.isArray(trucksData) && trucksData.length > 0) {
           const trucksWithMetrics = trucksData.map((truck: Truck) => {
-            // 👈 Filter para status "FINALIZADO" (da API)
             const pedidosDoTruck = pedidosData.filter((pedido: Pedido) => 
               pedido.truckId === truck.id && pedido.status === "FINALIZADO"
             );
@@ -81,9 +80,8 @@ export default function Trucks() {
           setTrucksList(trucksWithMetrics);
           setPedidosList(pedidosData);
 
-          // 👈 Cálculos gerais (todos pedidos FINALIZADO)
           const pedidosConcluidos = pedidosData.filter((pedido: Pedido) => 
-            pedido.status === "FINALIZADO"  // 👈 Matching API
+            pedido.status === "FINALIZADO"
           );
           console.log("pedidosConcluidos length:", pedidosConcluidos.length);
 
@@ -147,7 +145,6 @@ export default function Trucks() {
       setStatusTruck(selectedTruckData.ativo === 1 || selectedTruckData.ativo === 1 ? "Ativo" : "Inativo");
       setStatusTitle("Status do Truck");
     } else {
-      // 👈 Recalcula gerais
       const pedidosConcluidos = pedidosList.filter((pedido: Pedido) => 
         pedido.status === "FINALIZADO"
       );

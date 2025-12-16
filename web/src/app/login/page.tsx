@@ -25,6 +25,8 @@ export default function Login() {
       setLoading(true);
       setErro(null);
 
+      await login(email, senha);
+
       router.push("/sales");
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Erro ao fazer login.";
