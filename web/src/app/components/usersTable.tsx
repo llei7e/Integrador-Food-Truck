@@ -11,7 +11,7 @@ interface User {
   cargo: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://54.146.16.231:8080";
 
 export default function UsersTable() {
   const [users, setUsers] = useState<User[]>([]);
@@ -48,9 +48,10 @@ export default function UsersTable() {
 
       const data: User[] = await response.json();
       setUsers(data);
-    } catch (err: any) {
+    } catch (err: unknown) { 
       console.error("Erro ao carregar usuários:", err);
-      setError(err.message || "Falha ao carregar usuários.");
+      const errorMessage = err instanceof Error ? err.message : "Falha ao carregar usuários.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -79,9 +80,10 @@ export default function UsersTable() {
 
         // Refresh list
         fetchUsers();
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Erro ao deletar usuário:", err);
-        setError(err.message || "Falha ao deletar usuário.");
+        const errorMessage = err instanceof Error ? err.message : "Falha ao deletar usuário.";
+        setError(errorMessage);
       }
     }
   };
@@ -110,7 +112,6 @@ export default function UsersTable() {
           body: JSON.stringify({ nome: newUser.nome, email: newUser.email, cargo: newUser.cargo }),
         });
       } else {
-
         response = await fetch(`${API_BASE}/api/auth/register`, {
           method: "POST",
           headers: {
@@ -128,9 +129,10 @@ export default function UsersTable() {
       fetchUsers();
       setIsModalOpen(false);
       setEditingUser(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Erro ao salvar usuário:", err);
-      setError(err.message || "Falha ao salvar usuário.");
+      const errorMessage = err instanceof Error ? err.message : "Falha ao salvar usuário.";
+      setError(errorMessage);
     }
   };
 
