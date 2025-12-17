@@ -9,10 +9,6 @@ import { useRouter } from "next/navigation";
 import { getTrucks } from "@/services/trucks";
 import { getPedidos, Pedido } from "@/services/pedidos";
 
-const MapTilerView = dynamic(() => import('@/components/map'), { 
-  ssr: false,
-  loading: () => <p>Carregando mapa...</p>,
-});
 
 const ChartTruck = dynamic(() => import('@/components/ChartTruck'), {
   ssr: false,
@@ -201,10 +197,6 @@ export default function Trucks() {
       </div>
       <div className="flex">
         <div className="flex mt-2">
-          <MapTilerView
-            trucksList={trucksList}
-            selectedTruckId={selectedTruck}
-          />
         </div>
         <div>
           <div className="flex">

@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getPedidos, Pedido } from "../services/pedidos";
-
-import Filter from "../components/filter";
 import Header from "../components/header";
 import TableSales from "../components/tableSales";
 import Card from "../components/ui/card";
