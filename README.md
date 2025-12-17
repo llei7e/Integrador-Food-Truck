@@ -1,5 +1,5 @@
 
-# Integrador-Food-Truck
+# Integrador Food Truck
 
 Sistema de **Gerenciamento e Autoatendimento para Food Trucks**, desenvolvido como parte do **Projeto Integrador IV** do curso de **Análise e Desenvolvimento de Sistemas – SENAI Sorocaba/SP**.
 
@@ -64,21 +64,17 @@ O backend é executado em uma **instância EC2**, utilizando Docker para padroni
 
 ---
 
-## Execução do Backend (Local)
+## Execução do Backend (EC2)
 
-Pré-requisitos:
-- Java 21+
-- Docker
-- Docker Compose
-
-### Opção 1 – Spring Boot direto
+### Acessar a EC2
 ```bash
-./mvnw spring-boot:run
+ssh -i integrador-backend.pem ec2-user@IP_PUBLICO
 ```
 
-### Opção 2 – Docker
+### Gerar e executar
 ```bash
-docker-compose up -d
+./mvnw clean package -DskipTests
+java -jar target/backend-0.0.1-SNAPSHOT.jar
 ```
 
 ---
@@ -100,9 +96,12 @@ docker-compose up -d
 - **Artigo**  
   [Acessar Artigo](./documentos/Artigo_Food_Truck.pdf)
 
+- **Relatório Cyber Security**  
+    [Acessar Relatório Cyber](./Cyber%20Security/README.md) 
+
 ---
 
-## 📈 Resultados Esperados
+## Resultados Esperados
 
 - Redução do tempo de atendimento;
 - Menor incidência de erros manuais;
@@ -112,7 +111,7 @@ docker-compose up -d
 
 ---
 
-## 🔮 Trabalhos Futuros
+## Trabalhos Futuros
 
 - Pipeline CI/CD automatizado para EC2;
 - Integração com meios de pagamento;
@@ -121,6 +120,6 @@ docker-compose up -d
 
 ---
 
-## 📜 Licença
+## Licença
 
 Projeto desenvolvido para fins **acadêmicos** no *SENAI Gaspar Ricardo Junior* em Sorocaba-SP.
