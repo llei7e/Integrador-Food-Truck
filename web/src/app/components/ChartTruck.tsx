@@ -1,19 +1,16 @@
-// components/ChartTruck.tsx (Adicione check de segurança para trucksList undefined)
 "use client";
 import { useEffect } from "react";
 import ApexCharts from "apexcharts";
 
 interface ChartTruckProps {
   selectedTruckId?: string;
-  trucksList: { id: number; localizacao: string; ativo: boolean }[];
+  trucksList: { id: number; localizacao: string; ativo: boolean | number; pedidos?: number }[];  // 👈 Adicionado pedidos na interface
 }
 
 export default function ChartTruck({ selectedTruckId, trucksList }: ChartTruckProps) {
-
-    useEffect(() => {
+  useEffect(() => {
     if (typeof document === 'undefined') return;
 
-    // Filtra dados para o gráfico
     const filteredTrucks = selectedTruckId 
       ? trucksList.filter((truck) => truck.id.toString() === selectedTruckId)
       : trucksList;
@@ -23,13 +20,14 @@ export default function ChartTruck({ selectedTruckId, trucksList }: ChartTruckPr
     const el = document.querySelector(".chart-card");
     const backgroundColor = el ? getComputedStyle(el).backgroundColor : "#ffffff";
 
-    const chartData = filteredTrucks.map((truck) => truck.id);
+    const chartData = filteredTrucks.map((truck) => truck.pedidos || 0);
     const categories = filteredTrucks.map((truck) => `Truck ${truck.id}`);
 
     const options = {
       chart: {
         type: "bar",
-        height: 200,
+        height: 100,
+        width: 300,
         toolbar: { show: false },
         background: backgroundColor,
       },
@@ -41,7 +39,7 @@ export default function ChartTruck({ selectedTruckId, trucksList }: ChartTruckPr
       },
       series: [
         {
-          name: "Vendas Totais",
+          name: "Número de Pedidos",
           data: chartData,
         },
       ],
@@ -76,8 +74,8 @@ export default function ChartTruck({ selectedTruckId, trucksList }: ChartTruckPr
     return () => {
       chart.destroy();
     };
-  }, [selectedTruckId, trucksList]);
-  
+  }, [selectedTruckId, trucksList]);  // 👈 Dependência para recalcular se trucksList muda
+
   if (!trucksList || !Array.isArray(trucksList)) {
     return (
       <div className="chart-card max-w-sm w-full bg-white rounded-lg shadow-sm dark:bg-white p-4 md:p-6">
@@ -87,10 +85,10 @@ export default function ChartTruck({ selectedTruckId, trucksList }: ChartTruckPr
   }
 
   // Agora seguro: trucksList é array
-  const title = selectedTruckId ? `Profit - Truck ${selectedTruckId}` : "Profit Geral";
-  const profitValue = selectedTruckId 
-    ? trucksList.find((t) => t.id.toString() === selectedTruckId)?.id || 0
-    : trucksList.reduce((sum, t) => sum + t.id, 0);
+  const title = selectedTruckId ? `Número de Pedidos - Truck ${selectedTruckId}` : "Número de Pedidos Geral";  // 👈 Título atualizado
+  const pedidosValue = selectedTruckId 
+    ? trucksList.find((t) => t.id.toString() === selectedTruckId)?.pedidos || 0  // 👈 Use pedidos
+    : trucksList.reduce((sum, t) => sum + (t.pedidos || 0), 0);  // 👈 Total geral
 
   return (
     <div className="chart-card max-w-sm w-full bg-white rounded-lg shadow-sm dark:bg-white p-4 md:p-6">
@@ -100,7 +98,7 @@ export default function ChartTruck({ selectedTruckId, trucksList }: ChartTruckPr
             {title}
           </dt>
           <dd className="leading-none text-3xl font-bold text-gray-900 dark:text-gray-900">
-            ${profitValue.toLocaleString()}
+            {pedidosValue.toLocaleString()}
           </dd>
         </dl>
       </div>

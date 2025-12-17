@@ -9,9 +9,10 @@ import OnEye from "../public/favicon/on_eye";
 import logo from "../public/logo.png";
 import Image from "next/image";
 
+import { login } from "@/services/authService";
+
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
-
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,6 +24,8 @@ export default function Login() {
     try {
       setLoading(true);
       setErro(null);
+
+      await login(email, senha);
 
       router.push("/sales");
     } catch (e: unknown) {

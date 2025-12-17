@@ -1,7 +1,7 @@
 export interface Truck {
   id: number;
   localizacao: string;
-  ativo: boolean;
+  ativo: number;
   vendas?: number;
   pedidos?: number;
 }
@@ -12,7 +12,7 @@ export async function getTrucks() {
     throw new Error("Token de autenticação não encontrado. Faça login primeiro.");
   }
 
-  const response = await fetch("http://localhost:8080/api/trucks", {
+  const response = await fetch("http://54.146.16.231:8080/api/trucks", {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
