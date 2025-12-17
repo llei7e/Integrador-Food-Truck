@@ -6,6 +6,7 @@ import {
   ArcElement,
   Tooltip,
   Legend,
+  TooltipItem,
 } from "chart.js";
 import { useMemo } from "react";
 
@@ -15,11 +16,10 @@ interface Produto {
   id: number;
   nome: string;
   ativo: boolean;
-  // Outros campos se necessário
 }
 
 interface EstoquePieChartProps {
-  produtos: Produto[];  // 👈 Recebe produtos
+  produtos: Produto[];
 }
 
 export default function StockPieChart({ produtos = [] }: EstoquePieChartProps) {
@@ -35,8 +35,8 @@ export default function StockPieChart({ produtos = [] }: EstoquePieChartProps) {
         label: "Produtos",
         data: [ativos, inativos],
         backgroundColor: [
-          "rgba(34, 197, 94, 0.8)",  // Verde para ativos
-          "rgba(239, 68, 68, 0.8)",  // Vermelho para inativos
+          "rgba(34, 197, 94, 0.8)", 
+          "rgba(239, 68, 68, 0.8)",
         ],
         borderColor: [
           "rgba(34, 197, 94, 1)",
@@ -67,7 +67,7 @@ export default function StockPieChart({ produtos = [] }: EstoquePieChartProps) {
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: TooltipItem<'pie'>) => {
             const label = context.label || '';
             const value = context.parsed;
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
