@@ -40,33 +40,33 @@ jobs:
           path: web/coverage/
           retention-days: 7
 
-  #test-backend:
-  #  runs-on: ubuntu-latest
-  #  defaults:
-  #    run:
-  #      working-directory: ./Backend
-  #  steps:
-  #    - name: Checkout code
-  #      uses: actions/checkout@v4
-#
-  #    - name: Setup Java
-  #      uses: actions/setup-java@v4
-  #      with:
-  #        distribution: 'temurin'
-  #        java-version: '21'
-  #        cache: 'maven'
-  #        cache-dependency-path: Backend/pom.xml
-#
-  #    - name: Install backend dependencies & run tests
-  #      run: mvn clean test --batch-mode
-#
-  #    - name: Upload backend coverage (se JaCoCo)
-  #      if: success()
-  #      uses: actions/upload-artifact@v4
-  #      with:
-  #        name: backend-coverage
-  #        path: Backend/target/site/jacoco/
-#
+  test-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+          cache-dependency-path: Backend/pom.xml
+
+      - name: Install backend dependencies & run tests
+        run: mvn clean test --batch-mode
+
+      - name: Upload backend coverage (se JaCoCo)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: Backend/target/site/jacoco/
+
   build-frontend:
     needs: test-frontend
     runs-on: ubuntu-latest
@@ -96,35 +96,35 @@ jobs:
           name: frontend-build
           path: web/.next/
 
-  #build-backend:
-  #  needs: test-backend
-  #  runs-on: ubuntu-latest
-  #  defaults:
-  #    run:
-  #      working-directory: ./Backend
-  #  steps:
-  #    - name: Checkout code
-  #      uses: actions/checkout@v4
-#
-  #    - name: Setup Java
-  #      uses: actions/setup-java@v4
-  #      with:
-  #        distribution: 'temurin'
-  #        java-version: '21'
-  #        cache: 'maven'
-  #        cache-dependency-path: Backend/pom.xml
-#
-  #    - name: Build backend
-  #      run: |
-  #        mvn clean package -DskipTests --batch-mode
-  #        # Opcional: docker build -t backend-app .
-#
-  #    - name: Upload backend build
-  #      uses: actions/upload-artifact@v4
-  #      with:
-  #        name: backend-jar
-  #        path: Backend/target/*.jar
-#
+  build-backend:
+    needs: test-backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+          cache-dependency-path: Backend/pom.xml
+
+      - name: Build backend
+        run: |
+          mvn clean package -DskipTests --batch-mode
+           Opcional: docker build -t backend-app .
+
+      - name: Upload backend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: Backend/target/*.jar
+
   merge-to-main:
     needs: [test-frontend, build-frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging' && github.repository_owner == 'your-username'
