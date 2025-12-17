@@ -20,44 +20,50 @@ export default function Sales() {
 
   useEffect(() => {
     async function load() {
-    try {
-      setLoading(true);
-      setError(null);
-      const pedidos = await getPedidos();
-      setPedidosList(pedidos); // Agora tipado corretamente
+      try {
+        setLoading(true);
+        setError(null);
+        const token = localStorage.getItem('token');  // 👈 Check token inicial
+        if (!token) {
+          router.push('/login');
+          return;
+        }
 
-      const hoje = new Date().toISOString().split("T")[0];
+        const pedidos = await getPedidos();
+        setPedidosList(pedidos);
 
-      const pedidosDoDia = pedidos.filter((p: Pedido) => // Tipado aqui também
-        p.dataCriacao.startsWith(hoje)
-      );
+        const hoje = new Date().toISOString().split("T")[0];
 
-      setVendasDoDia(pedidosDoDia.length);
+        const pedidosDoDia = pedidos.filter((p: Pedido) => 
+          p.dataCriacao.startsWith(hoje)
+        );
 
-      setTotalPedidos(pedidos.length);
+        setVendasDoDia(pedidosDoDia.length);
 
-      const somaTotal = pedidos.reduce((acc: number, p: Pedido) => acc + p.total, 0);
+        setTotalPedidos(pedidos.length);
 
-      const ticket = pedidos.length > 0 ? somaTotal / pedidos.length : 0;
+        const somaTotal = pedidos.reduce((acc: number, p: Pedido) => acc + p.total, 0);
 
-      setTicketMedio(Number(ticket.toFixed(2)));
+        const ticket = pedidos.length > 0 ? somaTotal / pedidos.length : 0;
 
-    } catch (error: unknown) { // 👈 Mudei de 'any' para 'unknown'
-      console.error("Erro ao carregar pedidos:", error);
-      const errMessage = error instanceof Error ? error.message : "Erro desconhecido";
-      if (errMessage === "NO_TOKEN" || errMessage === "TOKEN_INVALID") {
-        console.error("Token inválido ou ausente – redirecionando para login");
-        localStorage.removeItem('token');
-        router.push('/login');
-        return;
+        setTicketMedio(Number(ticket.toFixed(2)));
+
+      } catch (error: unknown) {
+        console.error("Erro ao carregar pedidos:", error);
+        const errMessage = error instanceof Error ? error.message : "Erro desconhecido";
+        if (errMessage === "NO_TOKEN" || errMessage === "TOKEN_INVALID") {
+          console.error("Token inválido ou ausente – redirecionando para login");
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+        }
+        setError("Erro ao carregar pedidos. Tente novamente.");
+      } finally {
+        setLoading(false);
       }
-      setError("Erro ao carregar pedidos. Tente novamente.");
-    } finally {
-      setLoading(false);
     }
-  }
 
-  load();
+    load();
   }, [router]);
 
   if (loading) {
@@ -82,9 +88,6 @@ export default function Sales() {
   return (
     <div className="mr-4 ml-4">
       <Header />
-      <div className="flex justify-start items-center">
-        <Filter placeholder="Data: 10/08/2025 - 20/08/2025" icon="bx:calendar" />
-      </div>
 
       <div>
         <div className="flex justify-evenly">

@@ -1,6 +1,6 @@
 interface TableProps {
   selectedTruckId?: string;
-  trucksList: { id: number; localizacao: string; ativo: boolean }[];
+  trucksList: { id: number; localizacao: string; ativo: boolean | number }[];
 }
 
 export default function Table({ selectedTruckId, trucksList }: TableProps) {

@@ -23,7 +23,7 @@ export async function getPedidos() {
     throw new Error("NO_TOKEN");
   }
 
-  const response = await fetch("http://localhost:8080/api/pedidos", {
+  const response = await fetch("http://54.146.16.231:8080/api/pedidos", {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
